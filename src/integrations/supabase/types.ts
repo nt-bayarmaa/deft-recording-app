@@ -14,7 +14,197 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      loans: {
+        Row: {
+          amount: number
+          approval_token: string | null
+          borrower_id: string
+          borrower_name: string
+          created_at: string | null
+          currency: string
+          due_date: string
+          id: string
+          lender_id: string
+          lender_name: string
+          loan_date: string
+          memo: string | null
+          recipient_account: string | null
+          recipient_bank: string | null
+          sender_account: string | null
+          sender_bank: string | null
+          status: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          approval_token?: string | null
+          borrower_id: string
+          borrower_name: string
+          created_at?: string | null
+          currency?: string
+          due_date: string
+          id?: string
+          lender_id: string
+          lender_name: string
+          loan_date: string
+          memo?: string | null
+          recipient_account?: string | null
+          recipient_bank?: string | null
+          sender_account?: string | null
+          sender_bank?: string | null
+          status?: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          approval_token?: string | null
+          borrower_id?: string
+          borrower_name?: string
+          created_at?: string | null
+          currency?: string
+          due_date?: string
+          id?: string
+          lender_id?: string
+          lender_name?: string
+          loan_date?: string
+          memo?: string | null
+          recipient_account?: string | null
+          recipient_bank?: string | null
+          sender_account?: string | null
+          sender_bank?: string | null
+          status?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          id: string
+          message: string
+          person_name: string
+          read: boolean | null
+          related_loan_id: string | null
+          related_repayment_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          message: string
+          person_name: string
+          read?: boolean | null
+          related_loan_id?: string | null
+          related_repayment_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          message?: string
+          person_name?: string
+          read?: boolean | null
+          related_loan_id?: string | null
+          related_repayment_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_loan_id_fkey"
+            columns: ["related_loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_repayment_id_fkey"
+            columns: ["related_repayment_id"]
+            isOneToOne: false
+            referencedRelation: "repayments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      persons: {
+        Row: {
+          created_at: string | null
+          id: number
+          linked_user_id: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: never
+          linked_user_id?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: never
+          linked_user_id?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      repayments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by_user_id: string
+          currency: string
+          id: string
+          loan_id: string
+          memo: string | null
+          person_name: string
+          repayment_date: string
+          status: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by_user_id: string
+          currency?: string
+          id?: string
+          loan_id: string
+          memo?: string | null
+          person_name: string
+          repayment_date: string
+          status?: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by_user_id?: string
+          currency?: string
+          id?: string
+          loan_id?: string
+          memo?: string | null
+          person_name?: string
+          repayment_date?: string
+          status?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repayments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
