@@ -1,28 +1,36 @@
 import { Copy, Share2, LogOut } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 
-const mockProfile = {
-  username: "Бат-Эрдэнэ",
-  email: "bat@example.com",
-  userCode: "USR-A1B2C3",
-};
-
 export default function Profile() {
+  const { session } = useAuth();
+  const navigate = useNavigate();
+  const email = session?.user?.email ?? "";
+  const userId = session?.user?.id ?? "";
+  const displayName = email.split("@")[0];
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(mockProfile.userCode);
+    navigator.clipboard.writeText(userId);
     toast.success("ID хуулагдлаа");
   };
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ text: `Миний Өр.mn ID: ${mockProfile.userCode}` });
+        await navigator.share({ text: `Миний Өр.mn ID: ${userId}` });
       } catch {}
     } else {
       handleCopy();
     }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
   };
 
   return (
@@ -32,20 +40,20 @@ export default function Profile() {
 
         <div className="rounded-2xl border border-border p-6 bg-card space-y-6 text-center">
           <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center text-2xl font-bold mx-auto">
-            {mockProfile.username[0]}
+            {displayName[0]?.toUpperCase()}
           </div>
           <div>
-            <p className="text-lg font-semibold">{mockProfile.username}</p>
-            <p className="text-sm text-muted-foreground">{mockProfile.email}</p>
+            <p className="text-lg font-semibold">{displayName}</p>
+            <p className="text-sm text-muted-foreground">{email}</p>
           </div>
 
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">Хэрэглэгчийн ID</p>
-            <p className="text-lg font-mono font-semibold tracking-wider">{mockProfile.userCode}</p>
+            <p className="text-xs font-mono font-semibold tracking-wider break-all">{userId}</p>
           </div>
 
           <div className="flex justify-center p-4 bg-muted/30 rounded-xl">
-            <QRCodeSVG value={mockProfile.userCode} size={140} level="H" />
+            <QRCodeSVG value={userId} size={140} level="H" />
           </div>
 
           <div className="flex gap-2">
@@ -66,7 +74,10 @@ export default function Profile() {
           </div>
         </div>
 
-        <button className="w-full h-12 rounded-xl border border-border text-sm font-medium hover:bg-negative-light hover:text-negative transition-colors flex items-center justify-center gap-2">
+        <button
+          onClick={handleLogout}
+          className="w-full h-12 rounded-xl border border-border text-sm font-medium hover:bg-destructive/10 hover:text-destructive transition-colors flex items-center justify-center gap-2"
+        >
           <LogOut className="w-4 h-4" />
           Гарах
         </button>
