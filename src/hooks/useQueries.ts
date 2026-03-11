@@ -1,35 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPersons, createPerson } from "@/data/persons";
-import { getPersonBalances } from "@/data/balances";
-import { getLoans, getLoansForPerson, createLoan, updateLoanStatus } from "@/data/loans";
+import { getContacts, createContact } from "@/data/contacts";
+import { getLoans, getLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken } from "@/data/loans";
 import { getRepayments, createRepayment } from "@/data/repayments";
 import { getNotifications, markNotificationAsRead } from "@/data/notifications";
 import { useAuth } from "@/hooks/useAuth";
 
 function useUserId() {
   const { session } = useAuth();
-  return session?.user?.id ?? "me";
+  return session?.user?.id ?? "";
 }
 
-// --- Persons ---
-export function usePersons() {
-  return useQuery({ queryKey: ["persons"], queryFn: getPersons });
-}
-
-export function useCreatePerson() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (name: string) => createPerson(name),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["persons"] }),
+// --- Contacts ---
+export function useContacts() {
+  const userId = useUserId();
+  return useQuery({
+    queryKey: ["contacts", userId],
+    queryFn: () => getContacts(userId),
+    enabled: !!userId,
   });
 }
 
-// --- Balances ---
-export function usePersonBalances() {
+export function useCreateContact() {
+  const qc = useQueryClient();
   const userId = useUserId();
-  return useQuery({
-    queryKey: ["balances", userId],
-    queryFn: () => getPersonBalances(userId),
+  return useMutation({
+    mutationFn: (name: string) => createContact(userId, name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["contacts", userId] }),
   });
 }
 
@@ -54,8 +50,8 @@ export function useUpdateLoanStatus() {
   const qc = useQueryClient();
   const userId = useUserId();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Parameters<typeof updateLoanStatus>[1] }) =>
-      updateLoanStatus(id, status),
+    mutationFn: ({ id, status, approvedBy }: { id: string; status: Parameters<typeof updateLoanStatus>[1]; approvedBy?: string }) =>
+      updateLoanStatus(id, status, approvedBy),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["balances", userId] });
@@ -68,6 +64,14 @@ export function useLoansForPerson(personId: string) {
     queryKey: ["loans", "person", personId],
     queryFn: () => getLoansForPerson(personId),
     enabled: !!personId,
+  });
+}
+
+export function useLoanByApprovalToken(token: string | null) {
+  return useQuery({
+    queryKey: ["loan", "approval", token],
+    queryFn: () => getLoanByApprovalToken(token!),
+    enabled: !!token,
   });
 }
 
@@ -94,6 +98,7 @@ export function useNotifications() {
   return useQuery({
     queryKey: ["notifications", userId],
     queryFn: () => getNotifications(userId),
+    enabled: !!userId,
   });
 }
 

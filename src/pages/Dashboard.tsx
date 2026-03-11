@@ -1,13 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, ChevronRight } from "lucide-react";
-import { usePersonBalances } from "@/hooks/useQueries";
+import { useContacts } from "@/hooks/useQueries";
 import { formatAmount } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/AppLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { getPersonBalances } from "@/data/balances";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data: balances = [], isLoading, error } = usePersonBalances();
+  const { session } = useAuth();
+  const userId = session?.user?.id ?? "";
+
+  const { data: balances = [], isLoading, error } = useQuery({
+    queryKey: ["balances", userId],
+    queryFn: () => getPersonBalances(userId),
+    enabled: !!userId,
+  });
 
   const totalReceivable = balances
     .filter((b) => b.balance > 0 && b.currency === "MNT")
@@ -41,7 +52,6 @@ export default function Dashboard() {
           </div>
         ) : (
           <>
-            {/* Summary cards */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-border p-4 space-y-2 bg-positive-light">
                 <div className="flex items-center gap-2 text-positive">
@@ -63,7 +73,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Person list */}
             <div className="space-y-2">
               <h2 className="text-sm font-medium text-muted-foreground">Хүмүүс</h2>
               <div className="rounded-2xl border border-border divide-y divide-border overflow-hidden">

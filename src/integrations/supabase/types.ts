@@ -14,18 +14,46 @@ export type Database = {
   }
   public: {
     Tables: {
+      contacts: {
+        Row: {
+          created_at: string | null
+          id: string
+          linked_user_id: string | null
+          name: string
+          nickname: string | null
+          owner_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          linked_user_id?: string | null
+          name: string
+          nickname?: string | null
+          owner_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          linked_user_id?: string | null
+          name?: string
+          nickname?: string | null
+          owner_user_id?: string
+        }
+        Relationships: []
+      }
       loans: {
         Row: {
           amount: number
           approval_token: string | null
+          approved_at: string | null
+          approved_by: string | null
           borrower_id: string
-          borrower_name: string
           created_at: string | null
+          created_by: string | null
           currency: string
           due_date: string
           id: string
           lender_id: string
-          lender_name: string
           loan_date: string
           memo: string | null
           recipient_account: string | null
@@ -34,18 +62,20 @@ export type Database = {
           sender_bank: string | null
           status: string
           type: string
+          updated_at: string | null
         }
         Insert: {
           amount: number
           approval_token?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           borrower_id: string
-          borrower_name: string
           created_at?: string | null
+          created_by?: string | null
           currency?: string
           due_date: string
           id?: string
           lender_id: string
-          lender_name: string
           loan_date: string
           memo?: string | null
           recipient_account?: string | null
@@ -54,18 +84,20 @@ export type Database = {
           sender_bank?: string | null
           status?: string
           type: string
+          updated_at?: string | null
         }
         Update: {
           amount?: number
           approval_token?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           borrower_id?: string
-          borrower_name?: string
           created_at?: string | null
+          created_by?: string | null
           currency?: string
           due_date?: string
           id?: string
           lender_id?: string
-          lender_name?: string
           loan_date?: string
           memo?: string | null
           recipient_account?: string | null
@@ -74,6 +106,7 @@ export type Database = {
           sender_bank?: string | null
           status?: string
           type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -134,32 +167,13 @@ export type Database = {
           },
         ]
       }
-      persons: {
-        Row: {
-          created_at: string | null
-          id: number
-          linked_user_id: string | null
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: never
-          linked_user_id?: string | null
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: never
-          linked_user_id?: string | null
-          name?: string
-        }
-        Relationships: []
-      }
       repayments: {
         Row: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
           created_at: string | null
-          created_by_user_id: string
+          created_by: string | null
           currency: string
           id: string
           loan_id: string
@@ -171,8 +185,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
-          created_by_user_id: string
+          created_by?: string | null
           currency?: string
           id?: string
           loan_id: string
@@ -184,8 +200,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
-          created_by_user_id?: string
+          created_by?: string | null
           currency?: string
           id?: string
           loan_id?: string
@@ -204,6 +222,107 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          counterparty_id: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string
+          from_user_id: string | null
+          id: string
+          loan_id: string | null
+          memo: string | null
+          status: string | null
+          to_user_id: string | null
+          transaction_date: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          counterparty_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string
+          from_user_id?: string | null
+          id?: string
+          loan_id?: string | null
+          memo?: string | null
+          status?: string | null
+          to_user_id?: string | null
+          transaction_date: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          counterparty_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string
+          from_user_id?: string | null
+          id?: string
+          loan_id?: string | null
+          memo?: string | null
+          status?: string | null
+          to_user_id?: string | null
+          transaction_date?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_friends: {
+        Row: {
+          created_at: string | null
+          friend_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          friend_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          friend_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          created_at: string | null
+          updated_at: string | null
+          user_code: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          updated_at?: string | null
+          user_code?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          updated_at?: string | null
+          user_code?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

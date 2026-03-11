@@ -1,9 +1,9 @@
 import { AppLayout } from "@/components/AppLayout";
-import { usePersons } from "@/hooks/useQueries";
+import { useContacts } from "@/hooks/useQueries";
 import { UserPlus, Users as UsersIcon } from "lucide-react";
 
 export default function Friends() {
-  const { data: persons = [], isLoading, error } = usePersons();
+  const { data: contacts = [], isLoading, error } = useContacts();
 
   return (
     <AppLayout>
@@ -30,7 +30,7 @@ export default function Friends() {
             <p className="text-sm">Алдаа гарлаа</p>
             <p className="text-xs text-muted-foreground">{(error as Error).message}</p>
           </div>
-        ) : persons.length === 0 ? (
+        ) : contacts.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground space-y-3">
             <UsersIcon className="w-12 h-12 mx-auto opacity-30" />
             <p className="text-sm">Найз нэмэгдээгүй байна</p>
@@ -38,14 +38,14 @@ export default function Friends() {
           </div>
         ) : (
           <div className="rounded-2xl border border-border divide-y divide-border overflow-hidden">
-            {persons.map((person) => (
-              <div key={person.id} className="flex items-center gap-3 p-4 bg-card">
+            {contacts.map((contact) => (
+              <div key={contact.id} className="flex items-center gap-3 p-4 bg-card">
                 <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
-                  {person.name[0]}
+                  {contact.name[0]}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{person.name}</p>
-                  {person.linkedUserId && (
+                  <p className="text-sm font-medium truncate">{contact.name}</p>
+                  {contact.linkedUserId && (
                     <p className="text-xs text-muted-foreground">Холбогдсон</p>
                   )}
                 </div>

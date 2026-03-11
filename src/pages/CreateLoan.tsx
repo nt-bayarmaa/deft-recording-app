@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, ChevronDown } from "lucide-react";
-import { PersonSelect } from "@/components/PersonSelect";
+import { ContactSelect } from "@/components/ContactSelect";
 import { AmountInput } from "@/components/AmountInput";
 import { BankAccountInput } from "@/components/BankAccountInput";
 import { DatePicker } from "@/components/DatePicker";
-import { usePersons, useCreateLoan } from "@/hooks/useQueries";
+import { LoanSuccessModal } from "@/components/LoanSuccessModal";
+import { useContacts, useCreateContact, useCreateLoan } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import type { Person, LoanType } from "@/types";
+import type { Contact, LoanType } from "@/types";
 
 const LOAN_TYPE_LABELS: Record<LoanType, string> = {
   give: "Зээл өгөх",
@@ -28,7 +29,8 @@ export default function CreateLoan() {
   const loanType: LoanType = type === "give" || type === "take" ? type : "give";
   const { session } = useAuth();
   const { toast } = useToast();
-  const { data: personsData = [], isLoading: personsLoading } = usePersons();
+  const { data: contactsData = [] } = useContacts();
+  const createContact = useCreateContact();
   const createLoan = useCreateLoan();
 
   useEffect(() => {
@@ -37,8 +39,8 @@ export default function CreateLoan() {
     }
   }, [type, navigate]);
 
-  const [users, setUsers] = useState<Person[]>([]);
-  const [selectedUser, setSelectedUser] = useState("");
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContact, setSelectedContact] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("MNT");
   const [loanDate, setLoanDate] = useState(getToday);
@@ -50,26 +52,45 @@ export default function CreateLoan() {
   const [recipientAccount, setRecipientAccount] = useState("");
   const [showBankInfo, setShowBankInfo] = useState(false);
 
+  // Success modal state
+  const [successModal, setSuccessModal] = useState<{
+    open: boolean;
+    approvalToken: string;
+    amount: number;
+    currency: string;
+    personName: string;
+  }>({ open: false, approvalToken: "", amount: 0, currency: "MNT", personName: "" });
+
   useEffect(() => {
-    if (personsData.length > 0) setUsers(personsData);
-  }, [personsData]);
+    if (contactsData.length > 0) setContacts(contactsData);
+  }, [contactsData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
+    if (!selectedContact) return;
 
-    const currentUserId = session?.user?.id ?? "me";
-    const selectedPerson = users.find((u) => String(u.id) === selectedUser);
-    const personName = selectedPerson?.name ?? "";
+    const currentUserId = session?.user?.id ?? "";
+    const selected = contacts.find((c) => c.id === selectedContact);
+    let contactId = selectedContact;
 
+    // If temp contact, create it first
+    if (contactId.startsWith("temp-") && selected) {
+      try {
+        const created = await createContact.mutateAsync(selected.name);
+        contactId = created.id;
+      } catch (err) {
+        toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" });
+        return;
+      }
+    }
+
+    const personName = selected?.name ?? "";
     const isGive = loanType === "give";
 
     createLoan.mutate(
       {
-        lenderId: isGive ? currentUserId : selectedUser,
-        borrowerId: isGive ? selectedUser : currentUserId,
-        lenderName: isGive ? "Би" : personName,
-        borrowerName: isGive ? personName : "Би",
+        lenderId: isGive ? currentUserId : contactId,
+        borrowerId: isGive ? contactId : currentUserId,
         amount: parseFloat(amount.replace(/,/g, "")) || 0,
         currency,
         loanDate,
@@ -77,13 +98,22 @@ export default function CreateLoan() {
         memo,
         type: loanType,
         approvalToken: null,
+        createdBy: currentUserId,
         senderBank: showBankInfo ? senderBank : null,
         senderAccount: showBankInfo ? senderAccount : null,
         recipientBank: showBankInfo ? recipientBank : null,
         recipientAccount: showBankInfo ? recipientAccount : null,
       },
       {
-        onSuccess: () => navigate("/", { replace: true }),
+        onSuccess: (loan) => {
+          setSuccessModal({
+            open: true,
+            approvalToken: loan.approvalToken ?? "",
+            amount: loan.amount,
+            currency: loan.currency,
+            personName,
+          });
+        },
         onError: (err) =>
           toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" }),
       }
@@ -117,11 +147,11 @@ export default function CreateLoan() {
             <label className="text-xs text-muted-foreground font-medium">
               {loanType === "give" ? "Зээл өгөх хүн" : "Зээл авах хүн"}
             </label>
-            <PersonSelect
-              users={users}
-              onUsersChange={setUsers}
-              value={selectedUser}
-              onValueChange={setSelectedUser}
+            <ContactSelect
+              contacts={contacts}
+              onContactsChange={setContacts}
+              value={selectedContact}
+              onValueChange={setSelectedContact}
             />
           </div>
 
@@ -198,6 +228,18 @@ export default function CreateLoan() {
           {createLoan.isPending ? "Үүсгэж байна..." : "Үүсгэх"}
         </button>
       </form>
+
+      <LoanSuccessModal
+        open={successModal.open}
+        onClose={() => {
+          setSuccessModal((s) => ({ ...s, open: false }));
+          navigate("/", { replace: true });
+        }}
+        approvalToken={successModal.approvalToken}
+        amount={successModal.amount}
+        currency={successModal.currency}
+        personName={successModal.personName}
+      />
     </div>
   );
 }

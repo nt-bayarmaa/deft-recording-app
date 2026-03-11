@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ export default function Login() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +47,7 @@ export default function Login() {
     if (error) {
       toast.error(error.message);
     } else {
-      navigate("/");
+      navigate(redirectTo || "/");
     }
   };
 

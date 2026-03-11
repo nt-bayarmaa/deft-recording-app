@@ -1,7 +1,15 @@
-export interface Person {
-  id: number;
+export interface Contact {
+  id: string;
   name: string;
+  nickname?: string | null;
   linkedUserId?: string | null;
+  ownerUserId: string;
+}
+
+export interface UserProfile {
+  userId: string;
+  username: string | null;
+  userCode: string;
 }
 
 export type LoanType = "give" | "take";
@@ -13,8 +21,6 @@ export interface Loan {
   id: string;
   lenderId: string;
   borrowerId: string;
-  borrowerName: string;
-  lenderName: string;
   amount: number;
   currency: string;
   loanDate: string;
@@ -27,6 +33,8 @@ export interface Loan {
   senderAccount?: string | null;
   recipientBank?: string | null;
   recipientAccount?: string | null;
+  createdBy?: string | null;
+  approvedBy?: string | null;
   createdAt: string;
 }
 
@@ -39,7 +47,7 @@ export interface Repayment {
   memo: string;
   type: RepaymentType;
   status: string;
-  createdByUserId: string;
+  createdBy?: string | null;
   personName: string;
   createdAt: string;
 }
@@ -58,16 +66,8 @@ export interface Notification {
   createdAt: string;
 }
 
-export interface UserProfile {
-  uid: string;
-  username: string;
-  email: string;
-  userCode: string;
-}
-
 export interface LoanSelectItem {
   id: string;
-  userId: number;
   amount: number;
   loanDate: string;
   dueDate: string;
@@ -75,7 +75,7 @@ export interface LoanSelectItem {
 }
 
 export interface PersonBalance {
-  personId: number;
+  personId: string;
   name: string;
   balance: number;
   currency: string;

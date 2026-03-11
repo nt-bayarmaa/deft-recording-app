@@ -9,64 +9,64 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import type { Person } from "@/types";
+import type { Contact } from "@/types";
 
-interface PersonSelectProps {
-  users: Person[];
-  onUsersChange: (users: Person[]) => void;
+interface ContactSelectProps {
+  contacts: Contact[];
+  onContactsChange: (contacts: Contact[]) => void;
   value: string;
   onValueChange: (value: string) => void;
   id?: string;
   placeholder?: string;
 }
 
-export function PersonSelect({
-  users,
-  onUsersChange,
+export function ContactSelect({
+  contacts,
+  onContactsChange,
   value,
   onValueChange,
-  id = "user",
+  id = "contact",
   placeholder = "Хүн сонгох хайх үүсгэх",
-}: PersonSelectProps) {
+}: ContactSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
   const justClosedRef = useRef(false);
 
-  const selectedUser = users.find((u) => String(u.id) === value);
-  const hasExactMatch = users.some(
-    (u) => u.name.toLowerCase() === search.trim().toLowerCase()
+  const selectedContact = contacts.find((c) => c.id === value);
+  const hasExactMatch = contacts.some(
+    (c) => c.name.toLowerCase() === search.trim().toLowerCase()
   );
   const canAddNew = search.trim() && !hasExactMatch;
 
-  const filteredUsers = users.filter(
-    (u) =>
+  const filteredContacts = contacts.filter(
+    (c) =>
       !search.trim() ||
-      u.name.toLowerCase().includes(search.trim().toLowerCase())
+      c.name.toLowerCase().includes(search.trim().toLowerCase())
   );
 
-  const displayValue = open ? search : selectedUser ? selectedUser.name : "";
+  const displayValue = open ? search : selectedContact ? selectedContact.name : "";
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
       if (canAddNew) handleAddNew();
-      else if (filteredUsers.length > 0) handleSelect(String(filteredUsers[0].id));
+      else if (filteredContacts.length > 0) handleSelect(filteredContacts[0].id);
     }
     if (e.key === "Escape") setOpen(false);
   };
 
   useEffect(() => {
     if (open) {
-      setSearch(selectedUser ? selectedUser.name : "");
+      setSearch(selectedContact ? selectedContact.name : "");
       setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [open, selectedUser]);
+  }, [open, selectedContact]);
 
-  const handleSelect = (userId: string) => {
+  const handleSelect = (contactId: string) => {
     justClosedRef.current = true;
-    onValueChange(userId);
+    onValueChange(contactId);
     setSearch("");
     setOpen(false);
   };
@@ -75,10 +75,11 @@ export function PersonSelect({
     const trimmed = search.trim();
     if (!trimmed) return;
     justClosedRef.current = true;
-    const newId = Math.max(0, ...users.map((u) => u.id)) + 1;
-    const newUser: Person = { id: newId, name: trimmed };
-    onUsersChange([...users, newUser]);
-    onValueChange(String(newId));
+    // Use a temp ID; the parent should create the contact via mutation
+    const tempId = `temp-${Date.now()}`;
+    const newContact: Contact = { id: tempId, name: trimmed, ownerUserId: "" };
+    onContactsChange([...contacts, newContact]);
+    onValueChange(tempId);
     setSearch("");
     setOpen(false);
   };
@@ -139,20 +140,20 @@ export function PersonSelect({
           <CommandList className="max-h-60">
             <CommandEmpty>Хайлтад тохирох хүн олдсонгүй</CommandEmpty>
             <CommandGroup>
-              {filteredUsers.map((user) => (
+              {filteredContacts.map((contact) => (
                 <CommandItem
-                  key={user.id}
-                  value={user.name}
-                  onSelect={() => handleSelect(String(user.id))}
+                  key={contact.id}
+                  value={contact.name}
+                  onSelect={() => handleSelect(contact.id)}
                   className="cursor-pointer"
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4 shrink-0",
-                      value === String(user.id) ? "opacity-100" : "opacity-0"
+                      value === contact.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {user.name}
+                  {contact.name}
                 </CommandItem>
               ))}
             </CommandGroup>

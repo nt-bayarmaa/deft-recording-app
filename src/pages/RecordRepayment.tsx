@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, ChevronDown } from "lucide-react";
-import { PersonSelect } from "@/components/PersonSelect";
+import { ContactSelect } from "@/components/ContactSelect";
 import { LoanSelect } from "@/components/LoanSelect";
 import { AmountInput } from "@/components/AmountInput";
 import { DatePicker } from "@/components/DatePicker";
 import { BankAccountInput } from "@/components/BankAccountInput";
-import { usePersons, useLoansForPerson, useCreateRepayment } from "@/hooks/useQueries";
+import { useContacts, useCreateContact, useLoansForPerson, useCreateRepayment } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import type { Person, RepaymentType } from "@/types";
+import type { Contact, RepaymentType } from "@/types";
 
 const REPAYMENT_TYPE_LABELS: Record<RepaymentType, string> = {
   pay: "Төлбөр төлөх",
@@ -24,7 +24,8 @@ export default function RecordRepayment() {
   const repaymentType: RepaymentType = type === "pay" || type === "receive" ? type : "pay";
   const { session } = useAuth();
   const { toast } = useToast();
-  const { data: personsData = [] } = usePersons();
+  const { data: contactsData = [] } = useContacts();
+  const createContact = useCreateContact();
   const createRepayment = useCreateRepayment();
 
   useEffect(() => {
@@ -33,8 +34,8 @@ export default function RecordRepayment() {
     }
   }, [type, navigate]);
 
-  const [users, setUsers] = useState<Person[]>([]);
-  const [selectedUser, setSelectedUser] = useState("");
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContact, setSelectedContact] = useState("");
   const [selectedLoan, setSelectedLoan] = useState("");
   const [repaymentDate, setRepaymentDate] = useState(getToday);
   const [amount, setAmount] = useState("");
@@ -47,18 +48,30 @@ export default function RecordRepayment() {
   const [recipientAccount, setRecipientAccount] = useState("");
 
   useEffect(() => {
-    if (personsData.length > 0) setUsers(personsData);
-  }, [personsData]);
+    if (contactsData.length > 0) setContacts(contactsData);
+  }, [contactsData]);
 
-  const { data: userLoans = [] } = useLoansForPerson(selectedUser);
+  const { data: userLoans = [] } = useLoansForPerson(selectedContact);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !selectedLoan) return;
+    if (!selectedContact || !selectedLoan) return;
 
-    const currentUserId = session?.user?.id ?? "me";
-    const selectedPerson = users.find((u) => String(u.id) === selectedUser);
-    const personName = selectedPerson?.name ?? "";
+    const currentUserId = session?.user?.id ?? "";
+    const selected = contacts.find((c) => c.id === selectedContact);
+    let contactId = selectedContact;
+
+    if (contactId.startsWith("temp-") && selected) {
+      try {
+        const created = await createContact.mutateAsync(selected.name);
+        contactId = created.id;
+      } catch (err) {
+        toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" });
+        return;
+      }
+    }
+
+    const personName = selected?.name ?? "";
 
     createRepayment.mutate(
       {
@@ -68,7 +81,7 @@ export default function RecordRepayment() {
         repaymentDate,
         memo,
         type: repaymentType,
-        createdByUserId: currentUserId,
+        createdBy: currentUserId,
         personName,
       },
       {
@@ -101,15 +114,15 @@ export default function RecordRepayment() {
             <label className="text-xs text-muted-foreground font-medium">
               {repaymentType === "pay" ? "Төлбөр төлөх хүн" : "Төлбөр авсан хүн"}
             </label>
-            <PersonSelect
-              users={users}
-              onUsersChange={setUsers}
-              value={selectedUser}
-              onValueChange={(v) => { setSelectedUser(v); setSelectedLoan(""); }}
+            <ContactSelect
+              contacts={contacts}
+              onContactsChange={setContacts}
+              value={selectedContact}
+              onValueChange={(v) => { setSelectedContact(v); setSelectedLoan(""); }}
             />
           </div>
 
-          {selectedUser && (
+          {selectedContact && (
             <div className="space-y-2.5">
               <label className="text-xs text-muted-foreground font-medium">
                 {repaymentType === "pay" ? "Төлбөр төлөх зээлээ сонгоно уу" : "Төлбөр авсан зээлээ сонгоно уу"}
