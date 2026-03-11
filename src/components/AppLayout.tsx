@@ -3,7 +3,7 @@ import { Home, Clock, Plus, CheckSquare, Users, Bell, User, QrCode } from "lucid
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { mockNotifications } from "@/data/mock";
+import { useNotifications } from "@/hooks/useQueries";
 
 const bottomNavItems = [
   { to: "/", icon: Home, label: "Нүүр" },
