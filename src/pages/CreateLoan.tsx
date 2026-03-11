@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, ChevronDown } from "lucide-react";
 import { PersonSelect } from "@/components/PersonSelect";
-import { AmountInput, formatAmountInput } from "@/components/AmountInput";
+import { AmountInput } from "@/components/AmountInput";
 import { BankAccountInput } from "@/components/BankAccountInput";
 import { DatePicker } from "@/components/DatePicker";
-import { mockPersons } from "@/data/mock";
+import { usePersons, useCreateLoan } from "@/hooks/useQueries";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import type { Person, LoanType } from "@/types";
 
 const LOAN_TYPE_LABELS: Record<LoanType, string> = {
@@ -24,6 +26,10 @@ export default function CreateLoan() {
   const navigate = useNavigate();
   const { type } = useParams<{ type: string }>();
   const loanType: LoanType = type === "give" || type === "take" ? type : "give";
+  const { session } = useAuth();
+  const { toast } = useToast();
+  const { data: personsData = [], isLoading: personsLoading } = usePersons();
+  const createLoan = useCreateLoan();
 
   useEffect(() => {
     if (type && type !== "give" && type !== "take") {
@@ -31,7 +37,7 @@ export default function CreateLoan() {
     }
   }, [type, navigate]);
 
-  const [users, setUsers] = useState<Person[]>(mockPersons);
+  const [users, setUsers] = useState<Person[]>([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("MNT");
@@ -44,11 +50,44 @@ export default function CreateLoan() {
   const [recipientAccount, setRecipientAccount] = useState("");
   const [showBankInfo, setShowBankInfo] = useState(false);
 
+  useEffect(() => {
+    if (personsData.length > 0) setUsers(personsData);
+  }, [personsData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-    // Mock: would save to Firestore
-    navigate("/", { replace: true });
+
+    const currentUserId = session?.user?.id ?? "me";
+    const selectedPerson = users.find((u) => String(u.id) === selectedUser);
+    const personName = selectedPerson?.name ?? "";
+
+    const isGive = loanType === "give";
+
+    createLoan.mutate(
+      {
+        lenderId: isGive ? currentUserId : selectedUser,
+        borrowerId: isGive ? selectedUser : currentUserId,
+        lenderName: isGive ? "Би" : personName,
+        borrowerName: isGive ? personName : "Би",
+        amount: parseFloat(amount.replace(/,/g, "")) || 0,
+        currency,
+        loanDate,
+        dueDate,
+        memo,
+        type: loanType,
+        approvalToken: null,
+        senderBank: showBankInfo ? senderBank : null,
+        senderAccount: showBankInfo ? senderAccount : null,
+        recipientBank: showBankInfo ? recipientBank : null,
+        recipientAccount: showBankInfo ? recipientAccount : null,
+      },
+      {
+        onSuccess: () => navigate("/", { replace: true }),
+        onError: (err) =>
+          toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" }),
+      }
+    );
   };
 
   return (
@@ -153,9 +192,10 @@ export default function CreateLoan() {
 
         <button
           type="submit"
-          className="w-full bg-foreground text-background py-4 rounded-2xl font-semibold hover:opacity-90 transition-all active:scale-[0.99] shadow-lg"
+          disabled={createLoan.isPending}
+          className="w-full bg-foreground text-background py-4 rounded-2xl font-semibold hover:opacity-90 transition-all active:scale-[0.99] shadow-lg disabled:opacity-50"
         >
-          Үүсгэх
+          {createLoan.isPending ? "Үүсгэж байна..." : "Үүсгэх"}
         </button>
       </form>
     </div>

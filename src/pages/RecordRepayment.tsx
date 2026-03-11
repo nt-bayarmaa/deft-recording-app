@@ -6,7 +6,9 @@ import { LoanSelect } from "@/components/LoanSelect";
 import { AmountInput } from "@/components/AmountInput";
 import { DatePicker } from "@/components/DatePicker";
 import { BankAccountInput } from "@/components/BankAccountInput";
-import { mockPersons, mockLoanSelectItems } from "@/data/mock";
+import { usePersons, useLoansForPerson, useCreateRepayment } from "@/hooks/useQueries";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import type { Person, RepaymentType } from "@/types";
 
 const REPAYMENT_TYPE_LABELS: Record<RepaymentType, string> = {
@@ -20,6 +22,10 @@ export default function RecordRepayment() {
   const navigate = useNavigate();
   const { type } = useParams<{ type: string }>();
   const repaymentType: RepaymentType = type === "pay" || type === "receive" ? type : "pay";
+  const { session } = useAuth();
+  const { toast } = useToast();
+  const { data: personsData = [] } = usePersons();
+  const createRepayment = useCreateRepayment();
 
   useEffect(() => {
     if (type && type !== "pay" && type !== "receive") {
@@ -27,7 +33,7 @@ export default function RecordRepayment() {
     }
   }, [type, navigate]);
 
-  const [users, setUsers] = useState<Person[]>(mockPersons);
+  const [users, setUsers] = useState<Person[]>([]);
   const [selectedUser, setSelectedUser] = useState("");
   const [selectedLoan, setSelectedLoan] = useState("");
   const [repaymentDate, setRepaymentDate] = useState(getToday);
@@ -40,13 +46,37 @@ export default function RecordRepayment() {
   const [recipientBank, setRecipientBank] = useState("other");
   const [recipientAccount, setRecipientAccount] = useState("");
 
-  const userLoans = mockLoanSelectItems.filter((l) => String(l.userId) === selectedUser);
-  const isManualLoan = selectedLoan === "__manual__";
+  useEffect(() => {
+    if (personsData.length > 0) setUsers(personsData);
+  }, [personsData]);
+
+  const { data: userLoans = [] } = useLoansForPerson(selectedUser);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser || !selectedLoan) return;
-    navigate("/", { replace: true });
+
+    const currentUserId = session?.user?.id ?? "me";
+    const selectedPerson = users.find((u) => String(u.id) === selectedUser);
+    const personName = selectedPerson?.name ?? "";
+
+    createRepayment.mutate(
+      {
+        loanId: selectedLoan === "__manual__" ? "" : selectedLoan,
+        amount: parseFloat(amount.replace(/,/g, "")) || 0,
+        currency,
+        repaymentDate,
+        memo,
+        type: repaymentType,
+        createdByUserId: currentUserId,
+        personName,
+      },
+      {
+        onSuccess: () => navigate("/", { replace: true }),
+        onError: (err) =>
+          toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" }),
+      }
+    );
   };
 
   return (
@@ -140,9 +170,10 @@ export default function RecordRepayment() {
 
         <button
           type="submit"
-          className="w-full bg-foreground text-background py-4 rounded-2xl font-semibold hover:opacity-90 transition-all active:scale-[0.99] shadow-lg"
+          disabled={createRepayment.isPending}
+          className="w-full bg-foreground text-background py-4 rounded-2xl font-semibold hover:opacity-90 transition-all active:scale-[0.99] shadow-lg disabled:opacity-50"
         >
-          Төлбөр бүртгэх
+          {createRepayment.isPending ? "Бүртгэж байна..." : "Төлбөр бүртгэх"}
         </button>
       </form>
     </div>
