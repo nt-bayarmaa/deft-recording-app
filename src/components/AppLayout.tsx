@@ -3,7 +3,7 @@ import { Home, Clock, Plus, CheckSquare, Users, Bell, User, QrCode } from "lucid
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { mockNotifications } from "@/data/mock";
+import { useNotifications } from "@/hooks/useQueries";
 
 const bottomNavItems = [
   { to: "/", icon: Home, label: "Нүүр" },
@@ -21,7 +21,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [fabOpen, setFabOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const unreadCount = mockNotifications.filter((n) => !n.read).length;
+  const { data: notifications } = useNotifications();
+  const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
 
   const fabActions = [
     { label: "Зээл өгөх", to: "/loan/give", color: "text-positive" },
