@@ -21,7 +21,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [fabOpen, setFabOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const unreadCount = mockNotifications.filter((n) => !n.read).length;
+  const { data: notifications } = useNotifications();
+  const unreadCount = notifications?.filter((n) => !n.read).length ?? 0;
 
   const fabActions = [
     { label: "Зээл өгөх", to: "/loan/give", color: "text-positive" },
