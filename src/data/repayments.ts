@@ -11,7 +11,7 @@ function mapRepayment(row: any): Repayment {
     memo: row.memo ?? "",
     type: row.type,
     status: row.status,
-    createdByUserId: row.created_by_user_id,
+    createdBy: row.created_by,
     personName: row.person_name,
     createdAt: row.created_at,
   };
@@ -39,7 +39,7 @@ export async function createRepayment(
       repayment_date: insert.repaymentDate,
       memo: insert.memo,
       type: insert.type,
-      created_by_user_id: insert.createdByUserId,
+      created_by: insert.createdBy,
       person_name: insert.personName,
     })
     .select("*")
