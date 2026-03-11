@@ -29,7 +29,7 @@ export default function Approvals() {
     return contactNameMap.get(otherId) ?? otherId.slice(0, 8);
   };
 
-  const pendingLoans = loans.filter((l) => l.status === "pending" || l.status === "pending_borrower_approval");
+  const pendingLoans = loans.filter((l) => l.status !== "approved" && l.status !== "rejected");
 
   const handleAction = (id: string, status: "approved" | "rejected") => {
     updateStatus.mutate(
