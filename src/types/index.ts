@@ -66,7 +66,7 @@ export interface UserProfile {
 }
 
 export interface LoanSelectItem {
-  id: number;
+  id: string;
   userId: number;
   amount: number;
   loanDate: string;
