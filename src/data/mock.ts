@@ -121,8 +121,8 @@ export const mockBalances: PersonBalance[] = [
 ];
 
 export const mockLoanSelectItems: LoanSelectItem[] = [
-  { id: 1, userId: 1, amount: 500000, loanDate: "2026-02-15", dueDate: "2026-03-15", memo: "Гар утас засуулах" },
-  { id: 2, userId: 2, amount: 200000, loanDate: "2026-02-20", dueDate: "2026-03-20", memo: "Оюутны төлбөр" },
+  { id: "loan-1", userId: 1, amount: 500000, loanDate: "2026-02-15", dueDate: "2026-03-15", memo: "Гар утас засуулах" },
+  { id: "loan-2", userId: 2, amount: 200000, loanDate: "2026-02-20", dueDate: "2026-03-20", memo: "Оюутны төлбөр" },
 ];
 
 export const BANKS = [
