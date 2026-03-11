@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPersons, createPerson } from "@/data/persons";
 import { getPersonBalances } from "@/data/balances";
-import { getLoans, createLoan, updateLoanStatus } from "@/data/loans";
+import { getLoans, getLoansForPerson, createLoan, updateLoanStatus } from "@/data/loans";
 import { getRepayments, createRepayment } from "@/data/repayments";
 import { getNotifications, markNotificationAsRead } from "@/data/notifications";
 import { useAuth } from "@/hooks/useAuth";
