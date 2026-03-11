@@ -63,6 +63,14 @@ export function useUpdateLoanStatus() {
   });
 }
 
+export function useLoansForPerson(personId: string) {
+  return useQuery({
+    queryKey: ["loans", "person", personId],
+    queryFn: () => getLoansForPerson(personId),
+    enabled: !!personId,
+  });
+}
+
 // --- Repayments ---
 export function useRepayments() {
   return useQuery({ queryKey: ["repayments"], queryFn: getRepayments });
