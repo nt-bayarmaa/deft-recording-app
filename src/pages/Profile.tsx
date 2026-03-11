@@ -7,21 +7,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 
 export default function Profile() {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const navigate = useNavigate();
   const email = session?.user?.email ?? "";
-  const userId = session?.user?.id ?? "";
-  const displayName = email.split("@")[0];
+  const displayName = profile?.username || email.split("@")[0];
+  const userCode = profile?.userCode ?? "";
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(userId);
-    toast.success("ID хуулагдлаа");
+    navigator.clipboard.writeText(userCode);
+    toast.success("Код хуулагдлаа");
   };
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ text: `Миний Өр.mn ID: ${userId}` });
+        await navigator.share({ text: `Миний Өр.mn код: ${userCode}` });
       } catch {}
     } else {
       handleCopy();
@@ -48,12 +48,12 @@ export default function Profile() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Хэрэглэгчийн ID</p>
-            <p className="text-xs font-mono font-semibold tracking-wider break-all">{userId}</p>
+            <p className="text-xs text-muted-foreground">Хэрэглэгчийн код</p>
+            <p className="text-lg font-mono font-bold tracking-widest">{userCode}</p>
           </div>
 
           <div className="flex justify-center p-4 bg-muted/30 rounded-xl">
-            <QRCodeSVG value={userId} size={140} level="H" />
+            <QRCodeSVG value={userCode} size={140} level="H" />
           </div>
 
           <div className="flex gap-2">

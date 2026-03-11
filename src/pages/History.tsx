@@ -1,21 +1,38 @@
 import { AppLayout } from "@/components/AppLayout";
-import { useLoans, useRepayments } from "@/hooks/useQueries";
+import { useLoans, useRepayments, useContacts } from "@/hooks/useQueries";
+import { useAuth } from "@/hooks/useAuth";
 import { formatAmount, formatDate } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 export default function History() {
+  const { session } = useAuth();
   const { data: loans = [], isLoading: loansLoading, error: loansError } = useLoans();
   const { data: repayments = [], isLoading: repaymentsLoading, error: repaymentsError } = useRepayments();
+  const { data: contacts = [] } = useContacts();
 
+  const currentUserId = session?.user?.id ?? "";
   const isLoading = loansLoading || repaymentsLoading;
   const error = loansError || repaymentsError;
+
+  // Build contact name lookup
+  const contactNameMap = new Map<string, string>();
+  for (const c of contacts) {
+    contactNameMap.set(c.id, c.name);
+    if (c.linkedUserId) contactNameMap.set(c.linkedUserId, c.name);
+  }
+
+  const getOtherName = (loan: typeof loans[0]) => {
+    const isLender = loan.lenderId === currentUserId;
+    const otherId = isLender ? loan.borrowerId : loan.lenderId;
+    return contactNameMap.get(otherId) ?? otherId.slice(0, 8);
+  };
 
   const allItems = [
     ...loans.map((l) => ({
       id: l.id,
       date: l.createdAt,
       type: l.type === "give" ? "Зээл өгсөн" : "Зээл авсан",
-      person: l.type === "give" ? l.borrowerName : l.lenderName,
+      person: getOtherName(l),
       amount: l.amount,
       currency: l.currency,
       isPositive: l.type === "give",
