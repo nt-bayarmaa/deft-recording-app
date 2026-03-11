@@ -1,10 +1,17 @@
 import { AppLayout } from "@/components/AppLayout";
-import { mockLoans, mockRepayments, formatAmount, formatDate } from "@/data/mock";
+import { useLoans, useRepayments } from "@/hooks/useQueries";
+import { formatAmount, formatDate } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 export default function History() {
+  const { data: loans = [], isLoading: loansLoading, error: loansError } = useLoans();
+  const { data: repayments = [], isLoading: repaymentsLoading, error: repaymentsError } = useRepayments();
+
+  const isLoading = loansLoading || repaymentsLoading;
+  const error = loansError || repaymentsError;
+
   const allItems = [
-    ...mockLoans.map((l) => ({
+    ...loans.map((l) => ({
       id: l.id,
       date: l.createdAt,
       type: l.type === "give" ? "Зээл өгсөн" : "Зээл авсан",
@@ -15,7 +22,7 @@ export default function History() {
       status: l.status,
       memo: l.memo,
     })),
-    ...mockRepayments.map((r) => ({
+    ...repayments.map((r) => ({
       id: r.id,
       date: r.createdAt,
       type: r.type === "receive" ? "Төлбөр авсан" : "Төлбөр төлсөн",
@@ -33,7 +40,18 @@ export default function History() {
       <div className="container px-4 md:px-8 py-6 space-y-6 max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold">Түүх</h1>
 
-        {allItems.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-3 animate-pulse">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-2xl border border-border p-4 h-20 bg-muted" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-16 text-destructive space-y-2">
+            <p className="text-sm">Алдаа гарлаа</p>
+            <p className="text-xs text-muted-foreground">{(error as Error).message}</p>
+          </div>
+        ) : allItems.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <p className="text-sm">Гүйлгээ байхгүй</p>
           </div>
@@ -61,12 +79,7 @@ export default function History() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span
-                      className={cn(
-                        "text-sm font-semibold tabular-nums",
-                        item.isPositive ? "text-positive" : "text-negative"
-                      )}
-                    >
+                    <span className={cn("text-sm font-semibold tabular-nums", item.isPositive ? "text-positive" : "text-negative")}>
                       {item.isPositive ? "+" : "-"}
                       {formatAmount(item.amount, item.currency)}
                     </span>
