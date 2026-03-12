@@ -27,11 +27,11 @@ export default function Setup() {
 
       if (error) throw error;
 
-      // Force refetch of appUser in AuthProvider
-      queryClient.invalidateQueries({ queryKey: ["appUser"] });
+      // Trigger appUser refetch in AuthProvider
+      refetchAppUser();
 
       // Small delay to let AuthProvider pick up the change
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 600));
 
       navigate("/", { replace: true });
     } catch (err) {
