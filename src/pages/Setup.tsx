@@ -1,15 +1,46 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Setup() {
-  const [username, setUsername] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { session, refetchAppUser } = useAuth();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
-    // Mock: would save to Firestore
-    navigate("/");
+    if (!nickname.trim() || !session?.user?.id) return;
+
+    setIsSubmitting(true);
+    try {
+      // The DB trigger already creates a row on signup. Update it with nickname.
+      const { error } = await supabase
+        .from("users")
+        .update({ nickname: nickname.trim() })
+        .eq("auth_user_id", session.user.id);
+
+      if (error) throw error;
+
+      // Trigger appUser refetch in AuthProvider
+      refetchAppUser();
+
+      // Small delay to let AuthProvider pick up the change
+      await new Promise((r) => setTimeout(r, 600));
+
+      navigate("/", { replace: true });
+    } catch (err) {
+      toast({
+        title: "Алдаа",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -24,18 +55,18 @@ export default function Setup() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Хэрэглэгчийн нэр"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="Нэр (жнь: Бат)"
             maxLength={30}
             className="w-full h-12 px-4 bg-muted/30 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-ring text-sm"
           />
           <button
             type="submit"
-            disabled={!username.trim()}
+            disabled={!nickname.trim() || isSubmitting}
             className="w-full h-12 bg-foreground text-background rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            Үргэлжлүүлэх
+            {isSubmitting ? "Хадгалж байна..." : "Үргэлжлүүлэх"}
           </button>
         </form>
       </div>
