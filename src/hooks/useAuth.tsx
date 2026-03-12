@@ -18,38 +18,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
+    // First set up the listener (no await inside callback!)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
-        if (session?.user?.id) {
-          try {
-            const p = await ensureUserProfile(session.user.id);
-            setProfile(p);
-          } catch (e) {
-            console.error("Failed to ensure user profile:", e);
-          }
-        } else {
+        if (!session?.user?.id) {
           setProfile(null);
         }
         setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Then check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session?.user?.id) {
-        try {
-          const p = await ensureUserProfile(session.user.id);
-          setProfile(p);
-        } catch (e) {
-          console.error("Failed to ensure user profile:", e);
-        }
-      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Separate effect to load profile when session changes (safe to await here)
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) {
+      setProfile(null);
+      return;
+    }
+    let cancelled = false;
+    ensureUserProfile(userId)
+      .then((p) => { if (!cancelled) setProfile(p); })
+      .catch((e) => console.error("Failed to ensure user profile:", e));
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
 
   return (
     <AuthContext.Provider value={{ session, loading, profile }}>
