@@ -1,21 +1,26 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAppUser } from "@/data/users";
 import type { Session } from "@supabase/supabase-js";
 import type { AppUser } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AuthCtx {
   session: Session | null;
   loading: boolean;
   appUser: AppUser | null;
+  refetchAppUser: () => void;
 }
 
-const AuthContext = createContext<AuthCtx>({ session: null, loading: true, appUser: null });
+const AuthContext = createContext<AuthCtx>({ session: null, loading: true, appUser: null, refetchAppUser: () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const [fetchCounter, setFetchCounter] = useState(0);
+
+  const refetchAppUser = useCallback(() => setFetchCounter((c) => c + 1), []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -36,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load app user when session changes (the DB trigger auto-creates user row on signup)
+  // Load app user when session changes or refetch is triggered
   useEffect(() => {
     const authUserId = session?.user?.id;
     if (!authUserId) {
@@ -56,10 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     load();
     return () => { cancelled = true; };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, fetchCounter]);
 
   return (
-    <AuthContext.Provider value={{ session, loading, appUser }}>
+    <AuthContext.Provider value={{ session, loading, appUser, refetchAppUser }}>
       {children}
     </AuthContext.Provider>
   );

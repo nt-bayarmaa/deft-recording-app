@@ -9,8 +9,7 @@ export default function Setup() {
   const [nickname, setNickname] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { session } = useAuth();
-  const queryClient = useQueryClient();
+  const { session, refetchAppUser } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
