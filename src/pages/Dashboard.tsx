@@ -1,18 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, ChevronRight } from "lucide-react";
-import { useContacts } from "@/hooks/useQueries";
 import { formatAmount } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/AppLayout";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { getPersonBalances } from "@/data/balances";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { session } = useAuth();
-  const userId = session?.user?.id ?? "";
+  const { appUser } = useAuth();
+  const userId = appUser?.id ?? "";
 
   const { data: balances = [], isLoading, error } = useQuery({
     queryKey: ["balances", userId],
@@ -75,41 +73,47 @@ export default function Dashboard() {
 
             <div className="space-y-2">
               <h2 className="text-sm font-medium text-muted-foreground">Хүмүүс</h2>
-              <div className="rounded-2xl border border-border divide-y divide-border overflow-hidden">
-                {balances.map((person) => (
-                  <button
-                    key={person.personId}
-                    className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left"
-                    onClick={() => navigate(`/history?person=${person.personId}`)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">
-                        {person.name[0]}
+              {balances.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <p className="text-sm">Зээл бүртгэгдээгүй байна</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-border divide-y divide-border overflow-hidden">
+                  {balances.map((person) => (
+                    <button
+                      key={person.personId}
+                      className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors text-left"
+                      onClick={() => navigate(`/history?person=${person.personId}`)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">
+                          {person.name[0]}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{person.name}</p>
+                          {person.hasPending && (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                              Хүлээгдэж буй
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{person.name}</p>
-                        {person.hasPending && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                            Хүлээгдэж буй
-                          </span>
-                        )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={cn(
+                            "text-sm font-semibold tabular-nums",
+                            person.balance > 0 ? "text-positive" : "text-negative"
+                          )}
+                        >
+                          {person.balance > 0 ? "+" : ""}
+                          {formatAmount(Math.abs(person.balance), person.currency)}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={cn(
-                          "text-sm font-semibold tabular-nums",
-                          person.balance > 0 ? "text-positive" : "text-negative"
-                        )}
-                      >
-                        {person.balance > 0 ? "+" : ""}
-                        {formatAmount(Math.abs(person.balance), person.currency)}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}

@@ -6,10 +6,10 @@ import { AmountInput } from "@/components/AmountInput";
 import { BankAccountInput } from "@/components/BankAccountInput";
 import { DatePicker } from "@/components/DatePicker";
 import { LoanSuccessModal } from "@/components/LoanSuccessModal";
-import { useContacts, useCreateContact, useCreateLoan } from "@/hooks/useQueries";
+import { useFriends, useCreateLoan, useCreateShadowUserAndFriend, useCreateTransaction } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import type { Contact, LoanType } from "@/types";
+import type { LoanType } from "@/types";
 
 const LOAN_TYPE_LABELS: Record<LoanType, string> = {
   give: "Зээл өгөх",
@@ -27,11 +27,12 @@ export default function CreateLoan() {
   const navigate = useNavigate();
   const { type } = useParams<{ type: string }>();
   const loanType: LoanType = type === "give" || type === "take" ? type : "give";
-  const { session } = useAuth();
+  const { appUser } = useAuth();
   const { toast } = useToast();
-  const { data: contactsData = [] } = useContacts();
-  const createContact = useCreateContact();
+  const { data: friendsData = [] } = useFriends();
+  const createShadow = useCreateShadowUserAndFriend();
   const createLoan = useCreateLoan();
+  const createTransaction = useCreateTransaction();
 
   useEffect(() => {
     if (type && type !== "give" && type !== "take") {
@@ -39,8 +40,12 @@ export default function CreateLoan() {
     }
   }, [type, navigate]);
 
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [selectedContact, setSelectedContact] = useState("");
+  const friendOptions = friendsData.map((f) => ({
+    id: f.friendId,
+    name: f.friend.nickname || f.friend.username || f.friend.userCode,
+  }));
+
+  const [selectedPerson, setSelectedPerson] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("MNT");
   const [loanDate, setLoanDate] = useState(getToday);
@@ -52,7 +57,6 @@ export default function CreateLoan() {
   const [recipientAccount, setRecipientAccount] = useState("");
   const [showBankInfo, setShowBankInfo] = useState(false);
 
-  // Success modal state
   const [successModal, setSuccessModal] = useState<{
     open: boolean;
     approvalToken: string;
@@ -61,36 +65,26 @@ export default function CreateLoan() {
     personName: string;
   }>({ open: false, approvalToken: "", amount: 0, currency: "MNT", personName: "" });
 
-  useEffect(() => {
-    if (contactsData.length > 0) setContacts(contactsData);
-  }, [contactsData]);
+  const handleCreateNew = async (name: string) => {
+    try {
+      const shadow = await createShadow.mutateAsync(name);
+      setSelectedPerson(shadow.id);
+    } catch (err) {
+      toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedContact) return;
+    if (!selectedPerson || !appUser) return;
 
-    const currentUserId = session?.user?.id ?? "";
-    const selected = contacts.find((c) => c.id === selectedContact);
-    let contactId = selectedContact;
-
-    // If temp contact, create it first
-    if (contactId.startsWith("temp-") && selected) {
-      try {
-        const created = await createContact.mutateAsync(selected.name);
-        contactId = created.id;
-      } catch (err) {
-        toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" });
-        return;
-      }
-    }
-
-    const personName = selected?.name ?? "";
     const isGive = loanType === "give";
+    const personName = friendOptions.find((f) => f.id === selectedPerson)?.name ?? "";
 
     createLoan.mutate(
       {
-        lenderId: isGive ? currentUserId : contactId,
-        borrowerId: isGive ? contactId : currentUserId,
+        lenderId: isGive ? appUser.id : selectedPerson,
+        borrowerId: isGive ? selectedPerson : appUser.id,
         amount: parseFloat(amount.replace(/,/g, "")) || 0,
         currency,
         loanDate,
@@ -98,14 +92,24 @@ export default function CreateLoan() {
         memo,
         type: loanType,
         approvalToken: null,
-        createdBy: currentUserId,
-        senderBank: showBankInfo ? senderBank : null,
-        senderAccount: showBankInfo ? senderAccount : null,
-        recipientBank: showBankInfo ? recipientBank : null,
-        recipientAccount: showBankInfo ? recipientAccount : null,
+        createdBy: appUser.id,
       },
       {
         onSuccess: (loan) => {
+          // Create transaction if bank info provided
+          if (showBankInfo && (senderBank !== "other" || senderAccount || recipientBank !== "other" || recipientAccount)) {
+            createTransaction.mutate({
+              type: "loan_created",
+              loanId: loan.id,
+              repaymentId: null,
+              transactionDate: loanDate,
+              senderBank: senderBank !== "other" ? senderBank : null,
+              senderAccount: senderAccount || null,
+              recipientBank: recipientBank !== "other" ? recipientBank : null,
+              recipientAccount: recipientAccount || null,
+              memo,
+            });
+          }
           setSuccessModal({
             open: true,
             approvalToken: loan.approvalToken ?? "",
@@ -148,10 +152,10 @@ export default function CreateLoan() {
               {loanType === "give" ? "Зээл өгөх хүн" : "Зээл авах хүн"}
             </label>
             <ContactSelect
-              contacts={contacts}
-              onContactsChange={setContacts}
-              value={selectedContact}
-              onValueChange={setSelectedContact}
+              friends={friendOptions}
+              value={selectedPerson}
+              onValueChange={setSelectedPerson}
+              onCreateNew={handleCreateNew}
             />
           </div>
 

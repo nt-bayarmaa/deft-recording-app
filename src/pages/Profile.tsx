@@ -7,11 +7,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 
 export default function Profile() {
-  const { session, profile } = useAuth();
+  const { session, appUser } = useAuth();
   const navigate = useNavigate();
   const email = session?.user?.email ?? "";
-  const displayName = profile?.username || email.split("@")[0];
-  const userCode = profile?.userCode ?? "";
+  const displayName = appUser?.nickname || appUser?.username || email.split("@")[0];
+  const userCode = appUser?.userCode ?? "";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(userCode);

@@ -9,22 +9,27 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import type { Contact } from "@/types";
+import type { AppUser } from "@/types";
+
+interface FriendOption {
+  id: string; // users.id
+  name: string; // nickname or username
+}
 
 interface ContactSelectProps {
-  contacts: Contact[];
-  onContactsChange: (contacts: Contact[]) => void;
+  friends: FriendOption[];
   value: string;
   onValueChange: (value: string) => void;
+  onCreateNew?: (name: string) => void;
   id?: string;
   placeholder?: string;
 }
 
 export function ContactSelect({
-  contacts,
-  onContactsChange,
+  friends,
   value,
   onValueChange,
+  onCreateNew,
   id = "contact",
   placeholder = "Хүн сонгох хайх үүсгэх",
 }: ContactSelectProps) {
@@ -34,52 +39,48 @@ export function ContactSelect({
   const anchorRef = useRef<HTMLDivElement>(null);
   const justClosedRef = useRef(false);
 
-  const selectedContact = contacts.find((c) => c.id === value);
-  const hasExactMatch = contacts.some(
-    (c) => c.name.toLowerCase() === search.trim().toLowerCase()
+  const selectedFriend = friends.find((f) => f.id === value);
+  const hasExactMatch = friends.some(
+    (f) => f.name.toLowerCase() === search.trim().toLowerCase()
   );
-  const canAddNew = search.trim() && !hasExactMatch;
+  const canAddNew = search.trim() && !hasExactMatch && !!onCreateNew;
 
-  const filteredContacts = contacts.filter(
-    (c) =>
+  const filtered = friends.filter(
+    (f) =>
       !search.trim() ||
-      c.name.toLowerCase().includes(search.trim().toLowerCase())
+      f.name.toLowerCase().includes(search.trim().toLowerCase())
   );
 
-  const displayValue = open ? search : selectedContact ? selectedContact.name : "";
+  const displayValue = open ? search : selectedFriend ? selectedFriend.name : "";
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
       if (canAddNew) handleAddNew();
-      else if (filteredContacts.length > 0) handleSelect(filteredContacts[0].id);
+      else if (filtered.length > 0) handleSelect(filtered[0].id);
     }
     if (e.key === "Escape") setOpen(false);
   };
 
   useEffect(() => {
     if (open) {
-      setSearch(selectedContact ? selectedContact.name : "");
+      setSearch(selectedFriend ? selectedFriend.name : "");
       setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [open, selectedContact]);
+  }, [open, selectedFriend]);
 
-  const handleSelect = (contactId: string) => {
+  const handleSelect = (id: string) => {
     justClosedRef.current = true;
-    onValueChange(contactId);
+    onValueChange(id);
     setSearch("");
     setOpen(false);
   };
 
   const handleAddNew = () => {
     const trimmed = search.trim();
-    if (!trimmed) return;
+    if (!trimmed || !onCreateNew) return;
     justClosedRef.current = true;
-    // Use a temp ID; the parent should create the contact via mutation
-    const tempId = `temp-${Date.now()}`;
-    const newContact: Contact = { id: tempId, name: trimmed, ownerUserId: "" };
-    onContactsChange([...contacts, newContact]);
-    onValueChange(tempId);
+    onCreateNew(trimmed);
     setSearch("");
     setOpen(false);
   };
@@ -140,20 +141,20 @@ export function ContactSelect({
           <CommandList className="max-h-60">
             <CommandEmpty>Хайлтад тохирох хүн олдсонгүй</CommandEmpty>
             <CommandGroup>
-              {filteredContacts.map((contact) => (
+              {filtered.map((f) => (
                 <CommandItem
-                  key={contact.id}
-                  value={contact.name}
-                  onSelect={() => handleSelect(contact.id)}
+                  key={f.id}
+                  value={f.name}
+                  onSelect={() => handleSelect(f.id)}
                   className="cursor-pointer"
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4 shrink-0",
-                      value === contact.id ? "opacity-100" : "opacity-0"
+                      value === f.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {contact.name}
+                  {f.name}
                 </CommandItem>
               ))}
             </CommandGroup>
