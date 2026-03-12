@@ -12,7 +12,8 @@ function mapRepayment(row: any): Repayment {
     type: row.type,
     status: row.status,
     createdBy: row.created_by,
-    personName: row.person_name,
+    approvedBy: row.approved_by,
+    personName: row.person_name ?? "",
     createdAt: row.created_at,
   };
 }
@@ -28,7 +29,7 @@ export async function getRepayments(): Promise<Repayment[]> {
 }
 
 export async function createRepayment(
-  insert: Omit<Repayment, "id" | "createdAt" | "status">
+  insert: Omit<Repayment, "id" | "createdAt" | "status" | "approvedBy">
 ): Promise<Repayment> {
   const { data, error } = await supabase
     .from("repayments")
@@ -42,6 +43,26 @@ export async function createRepayment(
       created_by: insert.createdBy,
       person_name: insert.personName,
     })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return mapRepayment(data);
+}
+
+export async function updateRepaymentStatus(
+  id: string,
+  status: "completed" | "rejected",
+  approvedBy: string
+): Promise<Repayment> {
+  const { data, error } = await supabase
+    .from("repayments")
+    .update({
+      status,
+      approved_by: approvedBy,
+      approved_at: new Date().toISOString(),
+    })
+    .eq("id", id)
     .select("*")
     .single();
 

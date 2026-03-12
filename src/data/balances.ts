@@ -1,29 +1,29 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PersonBalance } from "@/types";
 
-export async function getPersonBalances(currentUserId: string): Promise<PersonBalance[]> {
-  const [loansRes, repaymentsRes, contactsRes] = await Promise.all([
-    supabase.from("loans").select("*").or(`lender_id.eq.${currentUserId},borrower_id.eq.${currentUserId}`),
-    supabase.from("repayments").select("*"),
-    supabase.from("contacts").select("id, name, linked_user_id").eq("owner_user_id", currentUserId),
+export async function getPersonBalances(appUserId: string): Promise<PersonBalance[]> {
+  const [loansRes, repaymentsRes, friendsRes] = await Promise.all([
+    supabase.from("loans").select("*").or(`lender_id.eq.${appUserId},borrower_id.eq.${appUserId}`),
+    supabase.from("repayments").select("*").eq("status", "completed"),
+    supabase.from("user_friends").select("friend_id, friend:users!user_friends_friend_id_fkey(id, nickname, username)").eq("user_id", appUserId),
   ]);
 
   if (loansRes.error) throw loansRes.error;
   if (repaymentsRes.error) throw repaymentsRes.error;
-  if (contactsRes.error) throw contactsRes.error;
+  if (friendsRes.error) throw friendsRes.error;
 
   const loans = loansRes.data;
   const repayments = repaymentsRes.data;
-  const contacts = contactsRes.data;
 
-  // Build a name lookup from contacts
-  const contactNameMap = new Map<string, string>();
-  for (const c of contacts) {
-    contactNameMap.set(c.id, c.name);
-    if (c.linked_user_id) contactNameMap.set(c.linked_user_id, c.name);
+  // Build name lookup from friends
+  const nameMap = new Map<string, string>();
+  for (const f of friendsRes.data as any[]) {
+    if (f.friend) {
+      nameMap.set(f.friend_id, f.friend.nickname || f.friend.username || f.friend_id.slice(0, 8));
+    }
   }
 
-  // Group repayments by loan_id
+  // Group completed repayments by loan_id
   const repaymentsByLoan = new Map<string, number>();
   for (const r of repayments) {
     repaymentsByLoan.set(r.loan_id, (repaymentsByLoan.get(r.loan_id) ?? 0) + Number(r.amount));
@@ -33,9 +33,9 @@ export async function getPersonBalances(currentUserId: string): Promise<PersonBa
   const balanceMap = new Map<string, { personId: string; name: string; balance: number; currency: string; hasPending: boolean }>();
 
   for (const loan of loans) {
-    const isLender = loan.lender_id === currentUserId;
+    const isLender = loan.lender_id === appUserId;
     const otherPersonId = isLender ? loan.borrower_id : loan.lender_id;
-    const otherName = contactNameMap.get(otherPersonId) ?? otherPersonId.slice(0, 8);
+    const otherName = nameMap.get(otherPersonId) ?? otherPersonId.slice(0, 8);
     const key = `${otherPersonId}:${loan.currency}`;
 
     if (!balanceMap.has(key)) {
@@ -44,12 +44,12 @@ export async function getPersonBalances(currentUserId: string): Promise<PersonBa
 
     const entry = balanceMap.get(key)!;
 
-    if (loan.status === "pending" || loan.status === "pending_borrower_approval") {
+    if (loan.status === "pending_borrower_approval") {
       entry.hasPending = true;
       continue;
     }
 
-    if (loan.status === "approved") {
+    if (loan.status === "completed") {
       const loanAmount = Number(loan.amount);
       const repaid = repaymentsByLoan.get(loan.id) ?? 0;
       const remaining = loanAmount - repaid;
@@ -57,11 +57,5 @@ export async function getPersonBalances(currentUserId: string): Promise<PersonBa
     }
   }
 
-  return Array.from(balanceMap.values()).map((b) => ({
-    personId: b.personId,
-    name: b.name,
-    balance: b.balance,
-    currency: b.currency,
-    hasPending: b.hasPending,
-  }));
+  return Array.from(balanceMap.values());
 }

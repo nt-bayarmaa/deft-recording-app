@@ -23,32 +23,30 @@ function mapLoan(row: any): Loan {
     type: row.type,
     status: row.status,
     approvalToken: row.approval_token,
-    senderBank: row.sender_bank,
-    senderAccount: row.sender_account,
-    recipientBank: row.recipient_bank,
-    recipientAccount: row.recipient_account,
     createdBy: row.created_by,
     approvedBy: row.approved_by,
     createdAt: row.created_at,
+    approvedAt: row.approved_at,
   };
 }
 
-export async function getLoans(): Promise<Loan[]> {
+export async function getLoans(userId: string): Promise<Loan[]> {
   const { data, error } = await supabase
     .from("loans")
     .select("*")
+    .or(`lender_id.eq.${userId},borrower_id.eq.${userId}`)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
   return data.map(mapLoan);
 }
 
-export async function getLoansForPerson(personId: string): Promise<LoanSelectItem[]> {
+export async function getLoansForPerson(userId: string, personId: string): Promise<LoanSelectItem[]> {
   const { data, error } = await supabase
     .from("loans")
-    .select("id, borrower_id, lender_id, amount, loan_date, due_date, memo")
-    .eq("status", "approved")
-    .or(`borrower_id.eq.${personId},lender_id.eq.${personId}`)
+    .select("id, amount, loan_date, due_date, memo")
+    .eq("status", "completed")
+    .or(`and(lender_id.eq.${userId},borrower_id.eq.${personId}),and(lender_id.eq.${personId},borrower_id.eq.${userId})`)
     .order("loan_date", { ascending: false });
 
   if (error) throw error;
@@ -63,7 +61,7 @@ export async function getLoansForPerson(personId: string): Promise<LoanSelectIte
 }
 
 export async function createLoan(
-  insert: Omit<Loan, "id" | "createdAt" | "status" | "approvedBy">
+  insert: Omit<Loan, "id" | "createdAt" | "status" | "approvedBy" | "approvedAt">
 ): Promise<Loan> {
   const approvalToken = insert.approvalToken || generateApprovalToken();
 
@@ -79,10 +77,6 @@ export async function createLoan(
       memo: insert.memo,
       type: insert.type,
       approval_token: approvalToken,
-      sender_bank: insert.senderBank,
-      sender_account: insert.senderAccount,
-      recipient_bank: insert.recipientBank,
-      recipient_account: insert.recipientAccount,
       created_by: insert.createdBy,
     })
     .select("*")
@@ -112,6 +106,16 @@ export async function updateLoanStatus(
 
   if (error) throw error;
   return mapLoan(data);
+}
+
+/** Update borrower_id (for shadow user merge) */
+export async function updateLoanBorrower(loanId: string, newBorrowerId: string): Promise<void> {
+  const { error } = await supabase
+    .from("loans")
+    .update({ borrower_id: newBorrowerId })
+    .eq("id", loanId);
+
+  if (error) throw error;
 }
 
 export async function getLoanByApprovalToken(token: string): Promise<Loan | null> {

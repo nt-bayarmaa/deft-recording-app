@@ -1,20 +1,24 @@
-export interface Contact {
+export interface AppUser {
   id: string;
-  name: string;
-  nickname?: string | null;
-  linkedUserId?: string | null;
-  ownerUserId: string;
+  authUserId: string | null;
+  username: string | null;
+  nickname: string | null;
+  userCode: string;
+  createdAt: string;
 }
 
-export interface UserProfile {
+export interface Friend {
+  id: string;
   userId: string;
-  username: string | null;
-  userCode: string;
+  friendId: string;
+  status: "pending" | "accepted";
+  friend?: AppUser;
 }
 
 export type LoanType = "give" | "take";
 export type RepaymentType = "pay" | "receive";
-export type LoanStatus = "pending" | "approved" | "rejected";
+export type LoanStatus = "pending_borrower_approval" | "completed" | "rejected";
+export type RepaymentStatus = "pending_lender_approval" | "completed" | "rejected";
 export type NotificationType = "loan_request" | "repayment_recorded";
 
 export interface Loan {
@@ -28,14 +32,11 @@ export interface Loan {
   memo: string;
   type: LoanType;
   status: LoanStatus;
-  approvalToken?: string | null;
-  senderBank?: string | null;
-  senderAccount?: string | null;
-  recipientBank?: string | null;
-  recipientAccount?: string | null;
-  createdBy?: string | null;
-  approvedBy?: string | null;
+  approvalToken: string | null;
+  createdBy: string | null;
+  approvedBy: string | null;
   createdAt: string;
+  approvedAt: string | null;
 }
 
 export interface Repayment {
@@ -46,9 +47,24 @@ export interface Repayment {
   repaymentDate: string;
   memo: string;
   type: RepaymentType;
-  status: string;
-  createdBy?: string | null;
+  status: RepaymentStatus;
+  createdBy: string | null;
+  approvedBy: string | null;
   personName: string;
+  createdAt: string;
+}
+
+export interface Transaction {
+  id: string;
+  type: "loan_created" | "repayment_recorded";
+  loanId: string | null;
+  repaymentId: string | null;
+  transactionDate: string;
+  senderBank: string | null;
+  senderAccount: string | null;
+  recipientBank: string | null;
+  recipientAccount: string | null;
+  memo: string | null;
   createdAt: string;
 }
 
@@ -56,8 +72,8 @@ export interface Notification {
   id: string;
   userId: string;
   type: NotificationType;
-  relatedLoanId?: string | null;
-  relatedRepaymentId?: string | null;
+  relatedLoanId: string | null;
+  relatedRepaymentId: string | null;
   read: boolean;
   message: string;
   amount: number;
