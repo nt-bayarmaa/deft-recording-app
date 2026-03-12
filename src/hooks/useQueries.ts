@@ -1,46 +1,43 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getContacts, createContact } from "@/data/contacts";
-import { getLoans, getLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken } from "@/data/loans";
+import { getFriends, addFriend, createShadowUser } from "@/data/users";
+import { getLoans, getLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken, updateLoanBorrower } from "@/data/loans";
 import { getRepayments, createRepayment } from "@/data/repayments";
 import { getNotifications, markNotificationAsRead } from "@/data/notifications";
+import { createTransaction } from "@/data/transactions";
 import { useAuth } from "@/hooks/useAuth";
 
-function useUserId() {
-  const { session } = useAuth();
-  return session?.user?.id ?? "";
+function useAppUserId() {
+  const { appUser } = useAuth();
+  return appUser?.id ?? "";
 }
 
-// --- Contacts ---
-export function useContacts() {
-  const userId = useUserId();
+// --- Friends ---
+export function useFriends() {
+  const userId = useAppUserId();
   return useQuery({
-    queryKey: ["contacts", userId],
-    queryFn: () => getContacts(userId),
+    queryKey: ["friends", userId],
+    queryFn: () => getFriends(userId),
     enabled: !!userId,
-  });
-}
-
-export function useCreateContact() {
-  const qc = useQueryClient();
-  const userId = useUserId();
-  return useMutation({
-    mutationFn: (name: string) => createContact(userId, name),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["contacts", userId] }),
   });
 }
 
 // --- Loans ---
 export function useLoans() {
-  return useQuery({ queryKey: ["loans"], queryFn: getLoans });
+  const userId = useAppUserId();
+  return useQuery({
+    queryKey: ["loans", userId],
+    queryFn: () => getLoans(userId),
+    enabled: !!userId,
+  });
 }
 
 export function useCreateLoan() {
   const qc = useQueryClient();
-  const userId = useUserId();
+  const userId = useAppUserId();
   return useMutation({
     mutationFn: createLoan,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["loans"] });
+      qc.invalidateQueries({ queryKey: ["loans", userId] });
       qc.invalidateQueries({ queryKey: ["balances", userId] });
     },
   });
@@ -48,22 +45,23 @@ export function useCreateLoan() {
 
 export function useUpdateLoanStatus() {
   const qc = useQueryClient();
-  const userId = useUserId();
+  const userId = useAppUserId();
   return useMutation({
     mutationFn: ({ id, status, approvedBy }: { id: string; status: Parameters<typeof updateLoanStatus>[1]; approvedBy?: string }) =>
       updateLoanStatus(id, status, approvedBy),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["loans"] });
-      qc.invalidateQueries({ queryKey: ["balances", userId] });
+      qc.invalidateQueries({ queryKey: ["balances"] });
     },
   });
 }
 
 export function useLoansForPerson(personId: string) {
+  const userId = useAppUserId();
   return useQuery({
-    queryKey: ["loans", "person", personId],
-    queryFn: () => getLoansForPerson(personId),
-    enabled: !!personId,
+    queryKey: ["loans", "person", userId, personId],
+    queryFn: () => getLoansForPerson(userId, personId),
+    enabled: !!userId && !!personId,
   });
 }
 
@@ -82,7 +80,7 @@ export function useRepayments() {
 
 export function useCreateRepayment() {
   const qc = useQueryClient();
-  const userId = useUserId();
+  const userId = useAppUserId();
   return useMutation({
     mutationFn: createRepayment,
     onSuccess: () => {
@@ -92,21 +90,44 @@ export function useCreateRepayment() {
   });
 }
 
+// --- Transactions ---
+export function useCreateTransaction() {
+  return useMutation({ mutationFn: createTransaction });
+}
+
+// --- Shadow User + Friend ---
+export function useCreateShadowUserAndFriend() {
+  const qc = useQueryClient();
+  const userId = useAppUserId();
+  return useMutation({
+    mutationFn: async (nickname: string) => {
+      const shadowUser = await createShadowUser(nickname);
+      await addFriend(userId, shadowUser.id);
+      return shadowUser;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["friends", userId] });
+    },
+  });
+}
+
 // --- Notifications ---
 export function useNotifications() {
-  const userId = useUserId();
+  const { session } = useAuth();
+  const authUserId = session?.user?.id ?? "";
   return useQuery({
-    queryKey: ["notifications", userId],
-    queryFn: () => getNotifications(userId),
-    enabled: !!userId,
+    queryKey: ["notifications", authUserId],
+    queryFn: () => getNotifications(authUserId),
+    enabled: !!authUserId,
   });
 }
 
 export function useMarkNotificationAsRead() {
   const qc = useQueryClient();
-  const userId = useUserId();
+  const { session } = useAuth();
+  const authUserId = session?.user?.id ?? "";
   return useMutation({
     mutationFn: (id: string) => markNotificationAsRead(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", authUserId] }),
   });
 }

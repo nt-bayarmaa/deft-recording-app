@@ -14,33 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      contacts: {
-        Row: {
-          created_at: string | null
-          id: string
-          linked_user_id: string | null
-          name: string
-          nickname: string | null
-          owner_user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          linked_user_id?: string | null
-          name: string
-          nickname?: string | null
-          owner_user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          linked_user_id?: string | null
-          name?: string
-          nickname?: string | null
-          owner_user_id?: string
-        }
-        Relationships: []
-      }
       loans: {
         Row: {
           amount: number
@@ -56,10 +29,6 @@ export type Database = {
           lender_id: string
           loan_date: string
           memo: string | null
-          recipient_account: string | null
-          recipient_bank: string | null
-          sender_account: string | null
-          sender_bank: string | null
           status: string
           type: string
           updated_at: string | null
@@ -78,10 +47,6 @@ export type Database = {
           lender_id: string
           loan_date: string
           memo?: string | null
-          recipient_account?: string | null
-          recipient_bank?: string | null
-          sender_account?: string | null
-          sender_bank?: string | null
           status?: string
           type: string
           updated_at?: string | null
@@ -100,15 +65,40 @@ export type Database = {
           lender_id?: string
           loan_date?: string
           memo?: string | null
-          recipient_account?: string | null
-          recipient_bank?: string | null
-          sender_account?: string | null
-          sender_bank?: string | null
           status?: string
           type?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "loans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_borrower_id_fkey"
+            columns: ["borrower_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_lender_id_fkey"
+            columns: ["lender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -165,6 +155,13 @@ export type Database = {
             referencedRelation: "repayments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       repayments: {
@@ -178,7 +175,7 @@ export type Database = {
           id: string
           loan_id: string
           memo: string | null
-          person_name: string
+          person_name: string | null
           repayment_date: string
           status: string
           type: string
@@ -193,7 +190,7 @@ export type Database = {
           id?: string
           loan_id: string
           memo?: string | null
-          person_name: string
+          person_name?: string | null
           repayment_date: string
           status?: string
           type: string
@@ -208,12 +205,26 @@ export type Database = {
           id?: string
           loan_id?: string
           memo?: string | null
-          person_name?: string
+          person_name?: string | null
           repayment_date?: string
           status?: string
           type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "repayments_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repayments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "repayments_loan_id_fkey"
             columns: ["loan_id"]
@@ -225,47 +236,41 @@ export type Database = {
       }
       transactions: {
         Row: {
-          amount: number
-          counterparty_id: string | null
           created_at: string | null
-          created_by: string | null
-          currency: string
-          from_user_id: string | null
           id: string
           loan_id: string | null
           memo: string | null
-          status: string | null
-          to_user_id: string | null
+          recipient_account: string | null
+          recipient_bank: string | null
+          repayment_id: string | null
+          sender_account: string | null
+          sender_bank: string | null
           transaction_date: string
           type: string
         }
         Insert: {
-          amount: number
-          counterparty_id?: string | null
           created_at?: string | null
-          created_by?: string | null
-          currency?: string
-          from_user_id?: string | null
           id?: string
           loan_id?: string | null
           memo?: string | null
-          status?: string | null
-          to_user_id?: string | null
+          recipient_account?: string | null
+          recipient_bank?: string | null
+          repayment_id?: string | null
+          sender_account?: string | null
+          sender_bank?: string | null
           transaction_date: string
           type: string
         }
         Update: {
-          amount?: number
-          counterparty_id?: string | null
           created_at?: string | null
-          created_by?: string | null
-          currency?: string
-          from_user_id?: string | null
           id?: string
           loan_id?: string | null
           memo?: string | null
-          status?: string | null
-          to_user_id?: string | null
+          recipient_account?: string | null
+          recipient_bank?: string | null
+          repayment_id?: string | null
+          sender_account?: string | null
+          sender_bank?: string | null
           transaction_date?: string
           type?: string
         }
@@ -277,6 +282,13 @@ export type Database = {
             referencedRelation: "loans"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_repayment_id_fkey"
+            columns: ["repayment_id"]
+            isOneToOne: false
+            referencedRelation: "repayments"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_friends: {
@@ -284,42 +296,66 @@ export type Database = {
           created_at: string | null
           friend_id: string
           id: string
+          status: string
           user_id: string
         }
         Insert: {
           created_at?: string | null
           friend_id: string
           id?: string
+          status?: string
           user_id: string
         }
         Update: {
           created_at?: string | null
           friend_id?: string
           id?: string
+          status?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_friends_friend_id_fkey"
+            columns: ["friend_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_friends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      user_profiles: {
+      users: {
         Row: {
+          auth_user_id: string | null
           created_at: string | null
+          id: string
+          nickname: string | null
           updated_at: string | null
           user_code: string
-          user_id: string
           username: string | null
         }
         Insert: {
+          auth_user_id?: string | null
           created_at?: string | null
+          id?: string
+          nickname?: string | null
           updated_at?: string | null
-          user_code?: string
-          user_id: string
+          user_code: string
           username?: string | null
         }
         Update: {
+          auth_user_id?: string | null
           created_at?: string | null
+          id?: string
+          nickname?: string | null
           updated_at?: string | null
           user_code?: string
-          user_id?: string
           username?: string | null
         }
         Relationships: []

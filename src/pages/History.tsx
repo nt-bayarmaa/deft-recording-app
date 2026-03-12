@@ -1,30 +1,41 @@
 import { AppLayout } from "@/components/AppLayout";
-import { useLoans, useRepayments, useContacts } from "@/hooks/useQueries";
+import { useLoans, useRepayments, useFriends } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { formatAmount, formatDate } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 export default function History() {
-  const { session } = useAuth();
+  const { appUser } = useAuth();
   const { data: loans = [], isLoading: loansLoading, error: loansError } = useLoans();
   const { data: repayments = [], isLoading: repaymentsLoading, error: repaymentsError } = useRepayments();
-  const { data: contacts = [] } = useContacts();
+  const { data: friends = [] } = useFriends();
 
-  const currentUserId = session?.user?.id ?? "";
+  const currentUserId = appUser?.id ?? "";
   const isLoading = loansLoading || repaymentsLoading;
   const error = loansError || repaymentsError;
 
-  // Build contact name lookup
-  const contactNameMap = new Map<string, string>();
-  for (const c of contacts) {
-    contactNameMap.set(c.id, c.name);
-    if (c.linkedUserId) contactNameMap.set(c.linkedUserId, c.name);
+  // Build name lookup from friends
+  const nameMap = new Map<string, string>();
+  for (const f of friends) {
+    nameMap.set(f.friendId, f.friend.nickname || f.friend.username || f.friendId.slice(0, 8));
   }
 
   const getOtherName = (loan: typeof loans[0]) => {
     const isLender = loan.lenderId === currentUserId;
     const otherId = isLender ? loan.borrowerId : loan.lenderId;
-    return contactNameMap.get(otherId) ?? otherId.slice(0, 8);
+    return nameMap.get(otherId) ?? otherId.slice(0, 8);
+  };
+
+  const statusLabel = (status: string) => {
+    if (status === "completed") return "Зөвшөөрсөн";
+    if (status === "rejected") return "Татгалзсан";
+    return "Хүлээгдэж буй";
+  };
+
+  const statusColor = (status: string) => {
+    if (status === "completed") return "bg-positive-light text-positive";
+    if (status === "rejected") return "bg-negative-light text-negative";
+    return "bg-amber-100 text-amber-800";
   };
 
   const allItems = [
@@ -81,17 +92,8 @@ export default function History() {
                     <p className="text-sm font-medium truncate">{item.person}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-muted-foreground">{item.type}</span>
-                      <span
-                        className={cn(
-                          "text-[10px] font-medium px-1.5 py-0.5 rounded",
-                          item.status === "approved"
-                            ? "bg-positive-light text-positive"
-                            : item.status === "rejected"
-                            ? "bg-negative-light text-negative"
-                            : "bg-amber-100 text-amber-800"
-                        )}
-                      >
-                        {item.status === "approved" ? "Зөвшөөрсөн" : item.status === "rejected" ? "Татгалзсан" : "Хүлээгдэж буй"}
+                      <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded", statusColor(item.status))}>
+                        {statusLabel(item.status)}
                       </span>
                     </div>
                   </div>

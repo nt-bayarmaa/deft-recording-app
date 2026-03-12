@@ -1,6 +1,5 @@
 import { AppLayout } from "@/components/AppLayout";
-import { useLoans, useUpdateLoanStatus } from "@/hooks/useQueries";
-import { useContacts } from "@/hooks/useQueries";
+import { useLoans, useUpdateLoanStatus, useFriends } from "@/hooks/useQueries";
 import { formatAmount, formatDate } from "@/data/mock";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,30 +7,28 @@ import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
 
 export default function Approvals() {
-  const { session } = useAuth();
+  const { appUser } = useAuth();
   const { data: loans = [], isLoading, error } = useLoans();
-  const { data: contacts = [] } = useContacts();
+  const { data: friends = [] } = useFriends();
   const updateStatus = useUpdateLoanStatus();
   const { toast } = useToast();
 
-  const currentUserId = session?.user?.id ?? "";
+  const currentUserId = appUser?.id ?? "";
 
-  // Build contact name lookup
-  const contactNameMap = new Map<string, string>();
-  for (const c of contacts) {
-    contactNameMap.set(c.id, c.name);
-    if (c.linkedUserId) contactNameMap.set(c.linkedUserId, c.name);
+  const nameMap = new Map<string, string>();
+  for (const f of friends) {
+    nameMap.set(f.friendId, f.friend.nickname || f.friend.username || f.friendId.slice(0, 8));
   }
 
   const getOtherName = (loan: typeof loans[0]) => {
     const isLender = loan.lenderId === currentUserId;
     const otherId = isLender ? loan.borrowerId : loan.lenderId;
-    return contactNameMap.get(otherId) ?? otherId.slice(0, 8);
+    return nameMap.get(otherId) ?? otherId.slice(0, 8);
   };
 
-  const pendingLoans = loans.filter((l) => l.status !== "approved" && l.status !== "rejected");
+  const pendingLoans = loans.filter((l) => l.status === "pending_borrower_approval");
 
-  const handleAction = (id: string, status: "approved" | "rejected") => {
+  const handleAction = (id: string, status: "completed" | "rejected") => {
     updateStatus.mutate(
       { id, status, approvedBy: currentUserId },
       { onError: (err) => toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" }) }
@@ -83,7 +80,7 @@ export default function Approvals() {
                   {loan.memo && <p className="text-xs text-muted-foreground">{loan.memo}</p>}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleAction(loan.id, "approved")}
+                      onClick={() => handleAction(loan.id, "completed")}
                       disabled={updateStatus.isPending}
                       className="flex-1 h-10 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >

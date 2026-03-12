@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, ChevronDown } from "lucide-react";
 import { ContactSelect } from "@/components/ContactSelect";
@@ -6,10 +6,10 @@ import { LoanSelect } from "@/components/LoanSelect";
 import { AmountInput } from "@/components/AmountInput";
 import { DatePicker } from "@/components/DatePicker";
 import { BankAccountInput } from "@/components/BankAccountInput";
-import { useContacts, useCreateContact, useLoansForPerson, useCreateRepayment } from "@/hooks/useQueries";
+import { useFriends, useLoansForPerson, useCreateRepayment, useCreateTransaction } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import type { Contact, RepaymentType } from "@/types";
+import type { RepaymentType } from "@/types";
 
 const REPAYMENT_TYPE_LABELS: Record<RepaymentType, string> = {
   pay: "Төлбөр төлөх",
@@ -22,20 +22,18 @@ export default function RecordRepayment() {
   const navigate = useNavigate();
   const { type } = useParams<{ type: string }>();
   const repaymentType: RepaymentType = type === "pay" || type === "receive" ? type : "pay";
-  const { session } = useAuth();
+  const { appUser } = useAuth();
   const { toast } = useToast();
-  const { data: contactsData = [] } = useContacts();
-  const createContact = useCreateContact();
+  const { data: friendsData = [] } = useFriends();
   const createRepayment = useCreateRepayment();
+  const createTransaction = useCreateTransaction();
 
-  useEffect(() => {
-    if (type && type !== "pay" && type !== "receive") {
-      navigate("/repayment/pay", { replace: true });
-    }
-  }, [type, navigate]);
+  const friendOptions = friendsData.map((f) => ({
+    id: f.friendId,
+    name: f.friend.nickname || f.friend.username || f.friend.userCode,
+  }));
 
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [selectedContact, setSelectedContact] = useState("");
+  const [selectedPerson, setSelectedPerson] = useState("");
   const [selectedLoan, setSelectedLoan] = useState("");
   const [repaymentDate, setRepaymentDate] = useState(getToday);
   const [amount, setAmount] = useState("");
@@ -47,31 +45,13 @@ export default function RecordRepayment() {
   const [recipientBank, setRecipientBank] = useState("other");
   const [recipientAccount, setRecipientAccount] = useState("");
 
-  useEffect(() => {
-    if (contactsData.length > 0) setContacts(contactsData);
-  }, [contactsData]);
-
-  const { data: userLoans = [] } = useLoansForPerson(selectedContact);
+  const { data: userLoans = [] } = useLoansForPerson(selectedPerson);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedContact || !selectedLoan) return;
+    if (!selectedPerson || !selectedLoan || !appUser) return;
 
-    const currentUserId = session?.user?.id ?? "";
-    const selected = contacts.find((c) => c.id === selectedContact);
-    let contactId = selectedContact;
-
-    if (contactId.startsWith("temp-") && selected) {
-      try {
-        const created = await createContact.mutateAsync(selected.name);
-        contactId = created.id;
-      } catch (err) {
-        toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" });
-        return;
-      }
-    }
-
-    const personName = selected?.name ?? "";
+    const personName = friendOptions.find((f) => f.id === selectedPerson)?.name ?? "";
 
     createRepayment.mutate(
       {
@@ -81,11 +61,27 @@ export default function RecordRepayment() {
         repaymentDate,
         memo,
         type: repaymentType,
-        createdBy: currentUserId,
+        createdBy: appUser.id,
         personName,
       },
       {
-        onSuccess: () => navigate("/", { replace: true }),
+        onSuccess: (repayment) => {
+          // Create transaction if bank info provided
+          if (showBankInfo && (senderBank !== "other" || senderAccount || recipientBank !== "other" || recipientAccount)) {
+            createTransaction.mutate({
+              type: "repayment_recorded",
+              loanId: null,
+              repaymentId: repayment.id,
+              transactionDate: repaymentDate,
+              senderBank: senderBank !== "other" ? senderBank : null,
+              senderAccount: senderAccount || null,
+              recipientBank: recipientBank !== "other" ? recipientBank : null,
+              recipientAccount: recipientAccount || null,
+              memo,
+            });
+          }
+          navigate("/", { replace: true });
+        },
         onError: (err) =>
           toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" }),
       }
@@ -115,14 +111,13 @@ export default function RecordRepayment() {
               {repaymentType === "pay" ? "Төлбөр төлөх хүн" : "Төлбөр авсан хүн"}
             </label>
             <ContactSelect
-              contacts={contacts}
-              onContactsChange={setContacts}
-              value={selectedContact}
-              onValueChange={(v) => { setSelectedContact(v); setSelectedLoan(""); }}
+              friends={friendOptions}
+              value={selectedPerson}
+              onValueChange={(v) => { setSelectedPerson(v); setSelectedLoan(""); }}
             />
           </div>
 
-          {selectedContact && (
+          {selectedPerson && (
             <div className="space-y-2.5">
               <label className="text-xs text-muted-foreground font-medium">
                 {repaymentType === "pay" ? "Төлбөр төлөх зээлээ сонгоно уу" : "Төлбөр авсан зээлээ сонгоно уу"}
