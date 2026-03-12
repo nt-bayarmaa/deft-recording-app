@@ -84,7 +84,12 @@ export default function CreateLoan() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPerson || !appUser) return;
+    if (!selectedPerson || !appUser?.id) {
+      if (!appUser?.id) {
+        toast({ title: "Түр хүлээнэ үү", description: "Хэрэглэгчийн мэдээлэл ачаалагдаагүй байна.", variant: "destructive" });
+      }
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -249,10 +254,10 @@ export default function CreateLoan() {
 
         <button
           type="submit"
-          disabled={isSubmitting || !selectedPerson}
+          disabled={isSubmitting || !selectedPerson || !appUser?.id}
           className="w-full bg-foreground text-background py-4 rounded-2xl font-semibold hover:opacity-90 transition-all active:scale-[0.99] shadow-lg disabled:opacity-50"
         >
-          {isSubmitting ? "Үүсгэж байна..." : "Үүсгэх"}
+          {isSubmitting ? "Үүсгэж байна..." : !appUser?.id ? "Ачаалж байна..." : "Үүсгэх"}
         </button>
       </form>
 
