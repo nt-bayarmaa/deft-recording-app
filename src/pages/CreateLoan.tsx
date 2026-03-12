@@ -16,6 +16,8 @@ const LOAN_TYPE_LABELS: Record<LoanType, string> = {
   take: "Зээл авах",
 };
 
+const NEW_PREFIX = "__new__:";
+
 const getToday = () => new Date().toISOString().split("T")[0];
 const getOneWeekLater = () => {
   const d = new Date();
@@ -56,6 +58,7 @@ export default function CreateLoan() {
   const [recipientBank, setRecipientBank] = useState("other");
   const [recipientAccount, setRecipientAccount] = useState("");
   const [showBankInfo, setShowBankInfo] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [successModal, setSuccessModal] = useState<{
     open: boolean;
@@ -65,27 +68,41 @@ export default function CreateLoan() {
     personName: string;
   }>({ open: false, approvalToken: "", amount: 0, currency: "MNT", personName: "" });
 
-  const handleCreateNew = async (name: string) => {
-    try {
-      const shadow = await createShadow.mutateAsync(name);
-      setSelectedPerson(shadow.id);
-    } catch (err) {
-      toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" });
-    }
+  const isPendingNew = selectedPerson.startsWith(NEW_PREFIX);
+  const pendingNewName = isPendingNew ? selectedPerson.slice(NEW_PREFIX.length) : "";
+
+  // Store new person locally with __new__: prefix — no API call
+  const handleCreateNew = (name: string) => {
+    setSelectedPerson(`${NEW_PREFIX}${name}`);
+  };
+
+  // Get display name for selected person
+  const getPersonName = () => {
+    if (isPendingNew) return pendingNewName;
+    return friendOptions.find((f) => f.id === selectedPerson)?.name ?? "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPerson || !appUser) return;
 
-    const isGive = loanType === "give";
-    const personName = friendOptions.find((f) => f.id === selectedPerson)?.name ?? "";
+    setIsSubmitting(true);
+    try {
+      // Step 1: If pending new person, create shadow user + friend
+      let borrowerId = selectedPerson;
+      if (isPendingNew) {
+        const shadow = await createShadow.mutateAsync(pendingNewName);
+        borrowerId = shadow.id;
+      }
 
-    createLoan.mutate(
-      {
-        lenderId: isGive ? appUser.id : selectedPerson,
-        borrowerId: isGive ? selectedPerson : appUser.id,
-        amount: parseFloat(amount.replace(/,/g, "")) || 0,
+      const isGive = loanType === "give";
+      const parsedAmount = parseFloat(amount.replace(/,/g, "")) || 0;
+
+      // Step 2: Create loan
+      const loan = await createLoan.mutateAsync({
+        lenderId: isGive ? appUser.id : borrowerId,
+        borrowerId: isGive ? borrowerId : appUser.id,
+        amount: parsedAmount,
         currency,
         loanDate,
         dueDate,
@@ -93,36 +110,42 @@ export default function CreateLoan() {
         type: loanType,
         approvalToken: null,
         createdBy: appUser.id,
-      },
-      {
-        onSuccess: (loan) => {
-          // Create transaction if bank info provided
-          if (showBankInfo && (senderBank !== "other" || senderAccount || recipientBank !== "other" || recipientAccount)) {
-            createTransaction.mutate({
-              type: "loan_created",
-              loanId: loan.id,
-              repaymentId: null,
-              transactionDate: loanDate,
-              senderBank: senderBank !== "other" ? senderBank : null,
-              senderAccount: senderAccount || null,
-              recipientBank: recipientBank !== "other" ? recipientBank : null,
-              recipientAccount: recipientAccount || null,
-              memo,
-            });
-          }
-          setSuccessModal({
-            open: true,
-            approvalToken: loan.approvalToken ?? "",
-            amount: loan.amount,
-            currency: loan.currency,
-            personName,
-          });
-        },
-        onError: (err) =>
-          toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" }),
+      });
+
+      // Step 3: Create transaction if bank info provided
+      if (showBankInfo && (senderBank !== "other" || senderAccount || recipientBank !== "other" || recipientAccount)) {
+        await createTransaction.mutateAsync({
+          type: "loan_created",
+          loanId: loan.id,
+          repaymentId: null,
+          transactionDate: loanDate,
+          senderBank: senderBank !== "other" ? senderBank : null,
+          senderAccount: senderAccount || null,
+          recipientBank: recipientBank !== "other" ? recipientBank : null,
+          recipientAccount: recipientAccount || null,
+          memo,
+        });
       }
-    );
+
+      // Step 4: Show success modal
+      setSuccessModal({
+        open: true,
+        approvalToken: loan.approvalToken ?? "",
+        amount: loan.amount,
+        currency: loan.currency,
+        personName: getPersonName(),
+      });
+    } catch (err) {
+      toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Augment friend options with pending new person for display
+  const displayOptions = isPendingNew
+    ? [...friendOptions, { id: selectedPerson, name: pendingNewName }]
+    : friendOptions;
 
   return (
     <div className="min-h-screen bg-background">
@@ -152,7 +175,7 @@ export default function CreateLoan() {
               {loanType === "give" ? "Зээл өгөх хүн" : "Зээл авах хүн"}
             </label>
             <ContactSelect
-              friends={friendOptions}
+              friends={displayOptions}
               value={selectedPerson}
               onValueChange={setSelectedPerson}
               onCreateNew={handleCreateNew}
@@ -226,10 +249,10 @@ export default function CreateLoan() {
 
         <button
           type="submit"
-          disabled={createLoan.isPending}
+          disabled={isSubmitting || !selectedPerson}
           className="w-full bg-foreground text-background py-4 rounded-2xl font-semibold hover:opacity-90 transition-all active:scale-[0.99] shadow-lg disabled:opacity-50"
         >
-          {createLoan.isPending ? "Үүсгэж байна..." : "Үүсгэх"}
+          {isSubmitting ? "Үүсгэж байна..." : "Үүсгэх"}
         </button>
       </form>
 
