@@ -84,7 +84,12 @@ export default function CreateLoan() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPerson || !appUser) return;
+    if (!selectedPerson || !appUser?.id) {
+      if (!appUser?.id) {
+        toast({ title: "Түр хүлээнэ үү", description: "Хэрэглэгчийн мэдээлэл ачаалагдаагүй байна.", variant: "destructive" });
+      }
+      return;
+    }
 
     setIsSubmitting(true);
     try {
