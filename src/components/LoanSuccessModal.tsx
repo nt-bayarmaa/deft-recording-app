@@ -54,7 +54,7 @@ export function LoanSuccessModal({
   }, [approvalToken]);
 
   const handleEmail = useCallback(() => {
-    const subject = encodeURIComponent("Зээл зөвшөөрөх - Өр.mn");
+    const subject = encodeURIComponent("Зээл зөвшөөрөх - Авлага өглөг бүртгэл апп");
     const body = encodeURIComponent(
       `Сайн байна уу,\n\nТа доорх холбоосоор зээлийг зөвшөөрнө үү:\n${approveLink}\n\nДүн: ${formatAmount(amount, currency)}`
     );
@@ -65,7 +65,7 @@ export function LoanSuccessModal({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Зээл зөвшөөрөх - Өр.mn",
+          title: "Зээл зөвшөөрөх - Авлага өглөг бүртгэл апп",
           text: `Зээл зөвшөөрөх холбоос: ${formatAmount(amount, currency)}`,
           url: approveLink,
         });

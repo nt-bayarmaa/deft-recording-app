@@ -38,7 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container flex h-14 items-center justify-between px-4 md:px-8">
           <RouterNavLink to="/" className="text-lg font-bold tracking-tight">
-            Өр<span className="text-muted-foreground font-normal">.mn</span>
+            Авлага өглөг бүртгэл апп
           </RouterNavLink>
 
           {/* Desktop nav */}

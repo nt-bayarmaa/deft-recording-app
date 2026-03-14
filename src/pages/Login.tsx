@@ -56,7 +56,7 @@ export default function Login() {
       <div className="w-full max-w-sm space-y-8 text-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Өр<span className="text-muted-foreground font-normal">.mn</span>
+            Авлага өглөг бүртгэл апп
           </h1>
           <p className="text-muted-foreground text-sm mt-2">
             Хувь хүний өр зээлийн бүртгэл

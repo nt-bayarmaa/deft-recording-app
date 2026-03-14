@@ -21,7 +21,7 @@ export default function Profile() {
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ text: `Миний Өр.mn код: ${userCode}` });
+        await navigator.share({ text: `Миний Авлага өглөг бүртгэл апп код: ${userCode}` });
       } catch {}
     } else {
       handleCopy();
