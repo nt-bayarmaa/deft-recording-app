@@ -9,6 +9,7 @@ import { LoanSuccessModal } from "@/components/LoanSuccessModal";
 import { useFriends, useCreateLoan, useCreateShadowUserAndFriend, useCreateTransaction } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { getFriendDisplayName } from "@/data/users";
 import type { LoanType } from "@/types";
 
 const LOAN_TYPE_LABELS: Record<LoanType, string> = {
@@ -44,7 +45,7 @@ export default function CreateLoan() {
 
   const friendOptions = friendsData.map((f) => ({
     id: f.friendId,
-    name: f.friend.nickname || f.friend.username || f.friend.userCode,
+    name: getFriendDisplayName(f.nickname, f.friend),
   }));
 
   const [selectedPerson, setSelectedPerson] = useState("");

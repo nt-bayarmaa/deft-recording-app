@@ -28,8 +28,6 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="container px-4 md:px-8 py-6 space-y-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold">Нүүр</h1>
-
         {isLoading ? (
           <div className="space-y-3 animate-pulse">
             <div className="grid grid-cols-2 gap-3">

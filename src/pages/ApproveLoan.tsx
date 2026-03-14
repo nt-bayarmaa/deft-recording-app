@@ -4,12 +4,24 @@ import { AppLayout } from "@/components/AppLayout";
 import {
   useLoanByApprovalToken,
   useUpdateLoanStatus,
+  useUserById,
+  useTransactionByLoanId,
 } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
-import { formatAmount, formatDate } from "@/data/mock";
+import {
+  formatAmount,
+  formatDate,
+  getBankLabel,
+  formatAccountNumber,
+} from "@/data/mock";
 import { useToast } from "@/hooks/use-toast";
-import { updateLoanBorrower } from "@/data/loans";
-import { addFriend, deleteShadowUser, getUserById } from "@/data/users";
+import { replaceShadowInLoans } from "@/data/loans";
+import {
+  addFriend,
+  deleteShadowUser,
+  getUserById,
+  removeFriendLinksToShadow,
+} from "@/data/users";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function ApproveLoan() {
@@ -23,8 +35,28 @@ export default function ApproveLoan() {
     error,
     refetch,
   } = useLoanByApprovalToken(token ?? null);
+  // Эсрэг талын хүн: user borrower бол lender, user lender бол borrower (shadow эсвэл бодит)
+  const counterpartyId =
+    loan && appUser
+      ? loan.lenderId === appUser.id
+        ? loan.borrowerId
+        : loan.lenderId
+      : null;
+  const { data: counterparty } = useUserById(counterpartyId);
+  const { data: lender } = useUserById(loan?.lenderId ?? null);
+  const { data: transaction } = useTransactionByLoanId(loan?.id ?? null);
   const updateStatus = useUpdateLoanStatus();
   const qc = useQueryClient();
+
+  const counterpartyName =
+    (counterparty?.nickname ||
+      counterparty?.username ||
+      counterparty?.userCode ||
+      counterpartyId?.slice(0, 8)) ??
+    "—";
+  const lenderName =
+    (lender?.nickname || lender?.username || lender?.userCode || loan?.lenderId?.slice(0, 8)) ?? "—";
+  const lenderEmail = lender?.email ?? "";
 
   const handleAction = async (status: "completed" | "rejected") => {
     if (!loan || !appUser) return;
@@ -34,12 +66,11 @@ export default function ApproveLoan() {
       if (status === "completed") {
         const borrower = await getUserById(loan.borrowerId);
         if (borrower && !borrower.authUserId && borrower.id !== appUser.id) {
-          // Shadow user merge: update loan borrower to current user
-          await updateLoanBorrower(loan.id, appUser.id);
-          // Add friend relationship (lender <-> current user)
-          await addFriend(loan.lenderId, appUser.id);
+          // Shadow merge: 1) replace in loans 2) fix friends 3) addFriend with lender's label (shadow.username) 4) delete shadow
+          await replaceShadowInLoans(borrower.id, appUser.id);
+          await removeFriendLinksToShadow(borrower.id);
+          await addFriend(loan.lenderId, appUser.id, borrower.username);
           await addFriend(appUser.id, loan.lenderId);
-          // Delete shadow user
           await deleteShadowUser(borrower.id);
         }
       }
@@ -102,81 +133,131 @@ export default function ApproveLoan() {
     <AppLayout>
       <div className="min-h-[60vh] flex items-center justify-center p-6">
         <div className="w-full max-w-sm text-center space-y-6">
-        <h1 className="text-2xl font-semibold">Зээл зөвшөөрөх</h1>
+          <h1 className="text-2xl font-semibold">Зээл зөвшөөрөх</h1>
 
-        <div className="rounded-2xl border border-border p-5 bg-card space-y-4 text-left">
-          <div className="text-center">
-            <p className="text-2xl font-bold tabular-nums">
-              {formatAmount(loan.amount, loan.currency)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {loan.type === "give" ? "Зээл өгөх" : "Зээл авах"}
-            </p>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Зээлсэн өдөр</span>
-              <span>{formatDate(loan.loanDate)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Төлөх өдөр</span>
-              <span>{formatDate(loan.dueDate)}</span>
-            </div>
-            {loan.memo && (
+          <div className="rounded-2xl border border-border p-5 bg-card space-y-4 text-left">
+            <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Тэмдэглэл</span>
-                <span className="text-right max-w-[60%]">{loan.memo}</span>
+                <span className="text-muted-foreground">
+                  {loan && appUser && loan.lenderId === appUser.id
+                    ? "Хэнд зээл өгч байна"
+                    : "Хэнээс ирсэн"}
+                </span>
+                <span className="font-medium">
+                  {loan && appUser && loan.lenderId === appUser.id
+                    ? counterpartyName
+                    : lenderName}
+                </span>
               </div>
-            )}
+              {lenderEmail && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Зээл өгсөн хүний и-мэйл</span>
+                  <span
+                    className="text-right max-w-[60%] truncate"
+                    title={lenderEmail}
+                  >
+                    {lenderEmail}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Зээл дүн</span>
+                <span className="font-semibold tabular-nums">
+                  {formatAmount(loan.amount, loan.currency)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Зээлсэн өдөр</span>
+                <span>{formatDate(loan.loanDate)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Төлөх өдөр</span>
+                <span>{formatDate(loan.dueDate)}</span>
+              </div>
+              {loan.memo && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground shrink-0">
+                    Тэмдэглэл
+                  </span>
+                  <span className="text-right max-w-[60%]">{loan.memo}</span>
+                </div>
+              )}
+              {(transaction?.senderBank || transaction?.senderAccount) && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground shrink-0">
+                    Зээл илгээсэн данс
+                  </span>
+                  <span className="text-right tabular-nums">
+                    {transaction.senderBank &&
+                      getBankLabel(transaction.senderBank)}
+                    {transaction.senderAccount &&
+                      ` ${formatAccountNumber(transaction.senderAccount)}`}
+                  </span>
+                </div>
+              )}
+              {(transaction?.recipientBank ||
+                transaction?.recipientAccount) && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground shrink-0">
+                    Зээл хүлээн авсан данс
+                  </span>
+                  <span className="text-right tabular-nums">
+                    {transaction.recipientBank &&
+                      getBankLabel(transaction.recipientBank)}
+                    {transaction.recipientAccount &&
+                      ` ${formatAccountNumber(transaction.recipientAccount)}`}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {isAlreadyActioned ? (
-          <div
-            className={`rounded-xl border p-4 ${
-              loan.status === "completed"
-                ? "border-positive/30 bg-positive-light text-positive"
-                : "border-negative/30 bg-negative-light text-negative"
-            }`}
-          >
-            <p className="font-medium">
-              {loan.status === "completed" ? "Зөвшөөрсөн" : "Татгалзсан"}
-            </p>
-            <p className="text-sm mt-1">
-              {loan.status === "completed"
-                ? "Зээл амжилттай зөвшөөрөгдлөө."
-                : "Зээлийг татгалзлаа."}
-            </p>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleAction("completed")}
-              disabled={updateStatus.isPending}
-              className="flex-1 h-12 rounded-xl bg-foreground text-background font-medium hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-50"
+          {isAlreadyActioned ? (
+            <div
+              className={`rounded-xl border p-4 ${
+                loan.status === "completed"
+                  ? "border-positive/30 bg-positive-light text-positive"
+                  : "border-negative/30 bg-negative-light text-negative"
+              }`}
             >
-              <Check className="w-5 h-5" />
-              Зөвшөөрөх
-            </button>
-            <button
-              onClick={() => handleAction("rejected")}
-              disabled={updateStatus.isPending}
-              className="flex-1 h-12 rounded-xl border border-border font-medium hover:bg-muted/50 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <X className="w-5 h-5" />
-              Татгалзах
-            </button>
-          </div>
-        )}
+              <p className="font-medium">
+                {loan.status === "completed" ? "Зөвшөөрсөн" : "Татгалзсан"}
+              </p>
+              <p className="text-sm mt-1">
+                {loan.status === "completed"
+                  ? "Зээл амжилттай зөвшөөрөгдлөө."
+                  : "Зээлийг татгалзлаа."}
+              </p>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleAction("completed")}
+                disabled={updateStatus.isPending}
+                className="flex-1 h-12 rounded-xl bg-foreground text-background font-medium hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Check className="w-5 h-5" />
+                Зөвшөөрөх
+              </button>
+              <button
+                onClick={() => handleAction("rejected")}
+                disabled={updateStatus.isPending}
+                className="flex-1 h-12 rounded-xl border border-border font-medium hover:bg-muted/50 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+                Татгалзах
+              </button>
+            </div>
+          )}
 
-        {isAlreadyActioned && (
-          <button
-            onClick={() => navigate("/")}
-            className="w-full h-12 rounded-xl bg-foreground text-background font-semibold hover:opacity-90 transition-opacity"
-          >
-            Нүүр хуудас руу
-          </button>
-        )}
+          {isAlreadyActioned && (
+            <button
+              onClick={() => navigate("/")}
+              className="w-full h-12 rounded-xl bg-foreground text-background font-semibold hover:opacity-90 transition-opacity"
+            >
+              Нүүр хуудас руу
+            </button>
+          )}
         </div>
       </div>
     </AppLayout>

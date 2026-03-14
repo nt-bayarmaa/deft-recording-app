@@ -118,6 +118,36 @@ export async function updateLoanBorrower(loanId: string, newBorrowerId: string):
   if (error) throw error;
 }
 
+/** Replace shadow user with real user in all loans (lender_id, borrower_id, created_by, approved_by) */
+export async function replaceShadowInLoans(
+  shadowId: string,
+  realUserId: string
+): Promise<void> {
+  const { error: e1 } = await supabase
+    .from("loans")
+    .update({ lender_id: realUserId })
+    .eq("lender_id", shadowId);
+  if (e1) throw e1;
+
+  const { error: e2 } = await supabase
+    .from("loans")
+    .update({ borrower_id: realUserId })
+    .eq("borrower_id", shadowId);
+  if (e2) throw e2;
+
+  const { error: e3 } = await supabase
+    .from("loans")
+    .update({ created_by: realUserId })
+    .eq("created_by", shadowId);
+  if (e3) throw e3;
+
+  const { error: e4 } = await supabase
+    .from("loans")
+    .update({ approved_by: realUserId })
+    .eq("approved_by", shadowId);
+  if (e4) throw e4;
+}
+
 export async function getLoanByApprovalToken(token: string): Promise<Loan | null> {
   const { data, error } = await supabase
     .from("loans")

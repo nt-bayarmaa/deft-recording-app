@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/AppLayout";
 import { useLoans, useRepayments, useFriends } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendDisplayName } from "@/data/users";
 import { formatAmount, formatDate } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
@@ -14,10 +15,9 @@ export default function History() {
   const isLoading = loansLoading || repaymentsLoading;
   const error = loansError || repaymentsError;
 
-  // Build name lookup from friends
   const nameMap = new Map<string, string>();
   for (const f of friends) {
-    nameMap.set(f.friendId, f.friend.nickname || f.friend.username || f.friendId.slice(0, 8));
+    nameMap.set(f.friendId, getFriendDisplayName(f.nickname, f.friend));
   }
 
   const getOtherName = (loan: typeof loans[0]) => {
@@ -66,8 +66,6 @@ export default function History() {
   return (
     <AppLayout>
       <div className="container px-4 md:px-8 py-6 space-y-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold">Түүх</h1>
-
         {isLoading ? (
           <div className="space-y-3 animate-pulse">
             {[1, 2, 3].map((i) => (

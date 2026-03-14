@@ -9,6 +9,10 @@ export const BANKS = [
   { value: "other", label: "Бусад" },
 ];
 
+export function getBankLabel(value: string): string {
+  return BANKS.find((b) => b.value === value)?.label ?? value;
+}
+
 export function formatAmount(amount: number, currency: string = "MNT"): string {
   const symbols: Record<string, string> = { USD: "$", MNT: "₮", CNY: "¥" };
   const symbol = symbols[currency] ?? currency;

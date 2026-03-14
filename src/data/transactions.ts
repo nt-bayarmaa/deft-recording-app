@@ -17,6 +17,19 @@ function mapTransaction(row: any): Transaction {
   };
 }
 
+export async function getTransactionByLoanId(loanId: string): Promise<Transaction | null> {
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("loan_id", loanId)
+    .eq("type", "loan_created")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return mapTransaction(data);
+}
+
 export async function createTransaction(
   insert: Omit<Transaction, "id" | "createdAt">
 ): Promise<Transaction> {

@@ -4,6 +4,7 @@ export interface AppUser {
   username: string | null;
   nickname: string | null;
   userCode: string;
+  email: string | null;
   createdAt: string;
 }
 
@@ -12,6 +13,8 @@ export interface Friend {
   userId: string;
   friendId: string;
   status: "pending" | "accepted";
+  /** How userId calls this friend (only visible to userId) */
+  nickname?: string | null;
   friend?: AppUser;
 }
 

@@ -5,7 +5,7 @@ export async function getPersonBalances(appUserId: string): Promise<PersonBalanc
   const [loansRes, repaymentsRes, friendsRes] = await Promise.all([
     supabase.from("loans").select("*").or(`lender_id.eq.${appUserId},borrower_id.eq.${appUserId}`),
     supabase.from("repayments").select("*").eq("status", "completed"),
-    supabase.from("user_friends").select("friend_id, friend:users!user_friends_friend_id_fkey(id, nickname, username)").eq("user_id", appUserId),
+    supabase.from("user_friends").select("friend_id, nickname, friend:users!user_friends_friend_id_fkey(id, nickname, username, user_code)").eq("user_id", appUserId),
   ]);
 
   if (loansRes.error) throw loansRes.error;
@@ -15,11 +15,11 @@ export async function getPersonBalances(appUserId: string): Promise<PersonBalanc
   const loans = loansRes.data;
   const repayments = repaymentsRes.data;
 
-  // Build name lookup from friends
   const nameMap = new Map<string, string>();
   for (const f of friendsRes.data as any[]) {
     if (f.friend) {
-      nameMap.set(f.friend_id, f.friend.nickname || f.friend.username || f.friend_id.slice(0, 8));
+      const name = f.nickname || f.friend.nickname || f.friend.username || f.friend.user_code || f.friend_id.slice(0, 8);
+      nameMap.set(f.friend_id, name);
     }
   }
 

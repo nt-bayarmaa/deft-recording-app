@@ -6,6 +6,7 @@ import { LoanSelect } from "@/components/LoanSelect";
 import { AmountInput } from "@/components/AmountInput";
 import { DatePicker } from "@/components/DatePicker";
 import { BankAccountInput } from "@/components/BankAccountInput";
+import { getFriendDisplayName } from "@/data/users";
 import { useFriends, useLoansForPerson, useCreateRepayment, useCreateTransaction } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -30,7 +31,7 @@ export default function RecordRepayment() {
 
   const friendOptions = friendsData.map((f) => ({
     id: f.friendId,
-    name: f.friend.nickname || f.friend.username || f.friend.userCode,
+    name: getFriendDisplayName(f.nickname, f.friend),
   }));
 
   const [selectedPerson, setSelectedPerson] = useState("");

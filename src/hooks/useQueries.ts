@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getFriends, addFriend, createShadowUser } from "@/data/users";
-import { getLoans, getLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken, updateLoanBorrower } from "@/data/loans";
+import { getLoans, getLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken } from "@/data/loans";
 import { getRepayments, createRepayment } from "@/data/repayments";
 import { getNotifications, markNotificationAsRead } from "@/data/notifications";
-import { createTransaction } from "@/data/transactions";
+import { createTransaction, getTransactionByLoanId } from "@/data/transactions";
+import { getUserById } from "@/data/users";
 import { useAuth } from "@/hooks/useAuth";
 
 function useAppUserId() {
@@ -70,6 +71,22 @@ export function useLoanByApprovalToken(token: string | null) {
     queryKey: ["loan", "approval", token],
     queryFn: () => getLoanByApprovalToken(token!),
     enabled: !!token,
+  });
+}
+
+export function useUserById(userId: string | null) {
+  return useQuery({
+    queryKey: ["user", userId],
+    queryFn: () => getUserById(userId!),
+    enabled: !!userId,
+  });
+}
+
+export function useTransactionByLoanId(loanId: string | null) {
+  return useQuery({
+    queryKey: ["transaction", "loan", loanId],
+    queryFn: () => getTransactionByLoanId(loanId!),
+    enabled: !!loanId,
   });
 }
 

@@ -1,5 +1,14 @@
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
-import { Home, Clock, Plus, CheckSquare, Users, Bell, User, QrCode } from "lucide-react";
+import {
+  Home,
+  Clock,
+  Plus,
+  CheckSquare,
+  Users,
+  Bell,
+  User,
+  QrCode,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -56,7 +65,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                 className={({ isActive }) =>
                   cn(
                     "transition-colors hover:text-foreground",
-                    isActive ? "text-foreground font-medium" : "text-muted-foreground"
+                    isActive
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground",
                   )
                 }
               >
@@ -107,7 +118,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 }}
                 className={cn(
                   "px-5 py-3 bg-card border border-border rounded-2xl text-sm font-medium shadow-lg min-w-[180px] text-center transition-transform hover:scale-105",
-                  action.color
+                  action.color,
                 )}
               >
                 {action.label}
@@ -128,21 +139,24 @@ export function AppLayout({ children }: AppLayoutProps) {
                   onClick={() => setFabOpen(!fabOpen)}
                   className={cn(
                     "w-12 h-12 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg -mt-4 transition-transform",
-                    fabOpen && "rotate-45"
+                    fabOpen && "rotate-45",
                   )}
                 >
                   <Plus className="w-6 h-6" />
                 </button>
               );
             }
-            const isActive = item.to === "/" ? location.pathname === "/" : location.pathname.startsWith(item.to);
+            const isActive =
+              item.to === "/"
+                ? location.pathname === "/"
+                : location.pathname.startsWith(item.to);
             return (
               <RouterNavLink
                 key={item.to}
                 to={item.to}
                 className={cn(
                   "flex flex-col items-center gap-1 text-[10px] py-1 px-3 transition-colors min-w-[52px]",
-                  isActive ? "text-foreground" : "text-muted-foreground"
+                  isActive ? "text-foreground" : "text-muted-foreground",
                 )}
               >
                 <item.icon className="w-5 h-5" />

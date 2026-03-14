@@ -53,7 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Small delay to allow the DB trigger to finish creating the user (if any)
         await new Promise((r) => setTimeout(r, 500));
-        const user = await getOrCreateAppUser(authUserId);
+        const email = session?.user?.email ?? null;
+        const displayName =
+          (session?.user?.user_metadata?.full_name as string) ||
+          (session?.user?.user_metadata?.name as string) ||
+          null;
+        const user = await getOrCreateAppUser(authUserId, email, displayName);
         if (!cancelled) setAppUser(user);
       } catch (e) {
         console.error("Failed to load app user:", e);

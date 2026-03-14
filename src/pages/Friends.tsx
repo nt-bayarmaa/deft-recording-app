@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useFriends } from "@/hooks/useQueries";
-import { getUserByCode, addFriend } from "@/data/users";
+import { getUserByCode, addFriend, getFriendDisplayName } from "@/data/users";
 import { useAuth } from "@/hooks/useAuth";
 import { UserPlus, Users as UsersIcon, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -43,8 +43,7 @@ export default function Friends() {
   return (
     <AppLayout>
       <div className="container px-4 md:px-8 py-6 space-y-6 max-w-2xl mx-auto">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Найзууд</h1>
+        <div className="flex items-center justify-end">
           <button
             onClick={() => setShowAdd(!showAdd)}
             className="h-9 px-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
@@ -99,7 +98,7 @@ export default function Friends() {
         ) : (
           <div className="rounded-2xl border border-border divide-y divide-border overflow-hidden">
             {friends.map((f) => {
-              const name = f.friend.nickname || f.friend.username || f.friend.userCode;
+              const name = getFriendDisplayName(f.nickname, f.friend);
               const isShadow = !f.friend.authUserId;
               return (
                 <div key={f.id} className="flex items-center gap-3 p-4 bg-card">

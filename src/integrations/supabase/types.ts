@@ -296,6 +296,7 @@ export type Database = {
           created_at: string | null
           friend_id: string
           id: string
+          nickname: string | null
           status: string
           user_id: string
         }
@@ -303,6 +304,7 @@ export type Database = {
           created_at?: string | null
           friend_id: string
           id?: string
+          nickname?: string | null
           status?: string
           user_id: string
         }
@@ -310,6 +312,7 @@ export type Database = {
           created_at?: string | null
           friend_id?: string
           id?: string
+          nickname?: string | null
           status?: string
           user_id?: string
         }
@@ -334,6 +337,7 @@ export type Database = {
         Row: {
           auth_user_id: string | null
           created_at: string | null
+          email: string | null
           id: string
           nickname: string | null
           updated_at: string | null
@@ -343,6 +347,7 @@ export type Database = {
         Insert: {
           auth_user_id?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
           nickname?: string | null
           updated_at?: string | null
@@ -352,6 +357,7 @@ export type Database = {
         Update: {
           auth_user_id?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
           nickname?: string | null
           updated_at?: string | null

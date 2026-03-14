@@ -8,6 +8,7 @@ function mapUser(row: any): AppUser {
     username: row.username,
     nickname: row.nickname,
     userCode: row.user_code,
+    email: row.email ?? null,
     createdAt: row.created_at,
   };
 }
@@ -26,18 +27,36 @@ export async function getAppUser(authUserId: string): Promise<AppUser | null> {
 }
 
 /** Get or create app user - creates row if not found (e.g. new signup, no DB trigger) */
-export async function getOrCreateAppUser(authUserId: string): Promise<AppUser> {
+export async function getOrCreateAppUser(
+  authUserId: string,
+  email?: string | null,
+  /** OAuth-аар анх нэвтрэх үед нэр (user_metadata.full_name эсвэл email prefix) */
+  displayName?: string | null
+): Promise<AppUser> {
   const existing = await getAppUser(authUserId);
-  if (existing) return existing;
+  if (existing) {
+    if (email != null && existing.email !== email) {
+      await supabase
+        .from("users")
+        .update({ email, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+      return { ...existing, email };
+    }
+    return existing;
+  }
 
   const userCode = generateUserCode();
+  const initialUsername =
+    displayName || (email ? email.split("@")[0] : null) || null;
+
   const { data, error } = await supabase
     .from("users")
     .insert({
       auth_user_id: authUserId,
       user_code: userCode,
       nickname: null,
-      username: null,
+      username: initialUsername,
+      email: email ?? null,
     })
     .select("*")
     .single();
@@ -72,13 +91,13 @@ export async function getUserByCode(userCode: string): Promise<AppUser | null> {
   return mapUser(data);
 }
 
-/** Create a shadow user (no auth_user_id) */
-export async function createShadowUser(nickname: string): Promise<AppUser> {
+/** Create a shadow user (no auth_user_id). Uses username for lender's label. */
+export async function createShadowUser(label: string): Promise<AppUser> {
   const userCode = generateUserCode();
   const { data, error } = await supabase
     .from("users")
     .insert({
-      nickname,
+      username: label,
       user_code: userCode,
       auth_user_id: null,
     })
@@ -103,7 +122,7 @@ function generateUserCode(): string {
 export async function getFriends(userId: string): Promise<(Friend & { friend: AppUser })[]> {
   const { data, error } = await supabase
     .from("user_friends")
-    .select("id, user_id, friend_id, status, friend:users!user_friends_friend_id_fkey(*)")
+    .select("id, user_id, friend_id, status, nickname, friend:users!user_friends_friend_id_fkey(*)")
     .eq("user_id", userId)
     .eq("status", "accepted");
 
@@ -114,12 +133,16 @@ export async function getFriends(userId: string): Promise<(Friend & { friend: Ap
     userId: row.user_id,
     friendId: row.friend_id,
     status: row.status,
+    nickname: row.nickname ?? null,
     friend: mapUser(row.friend),
   }));
 }
 
-export async function addFriend(userId: string, friendId: string): Promise<void> {
-  // Check if already exists
+export async function addFriend(
+  userId: string,
+  friendId: string,
+  nickname?: string | null
+): Promise<void> {
   const { data: existing } = await supabase
     .from("user_friends")
     .select("id")
@@ -129,11 +152,45 @@ export async function addFriend(userId: string, friendId: string): Promise<void>
 
   if (existing) return;
 
-  const { error } = await supabase
-    .from("user_friends")
-    .insert({ user_id: userId, friend_id: friendId, status: "accepted" });
+  const insert: Record<string, unknown> = {
+    user_id: userId,
+    friend_id: friendId,
+    status: "accepted",
+  };
+  if (nickname != null) insert.nickname = nickname;
+
+  const { error } = await supabase.from("user_friends").insert(insert);
 
   if (error) throw error;
+}
+
+/** Display name for a friend: friendship nickname || friend's own name */
+export function getFriendDisplayName(
+  friendshipNickname: string | null | undefined,
+  friend: AppUser
+): string {
+  return (
+    friendshipNickname ||
+    friend.nickname ||
+    friend.username ||
+    friend.userCode ||
+    friend.id.slice(0, 8)
+  );
+}
+
+/** Remove friend links pointing to shadow (before merge); addFriend will add real user */
+export async function removeFriendLinksToShadow(shadowId: string): Promise<void> {
+  const { error: e1 } = await supabase
+    .from("user_friends")
+    .delete()
+    .eq("user_id", shadowId);
+  if (e1) throw e1;
+
+  const { error: e2 } = await supabase
+    .from("user_friends")
+    .delete()
+    .eq("friend_id", shadowId);
+  if (e2) throw e2;
 }
 
 /** Delete shadow user (used during merge) */
