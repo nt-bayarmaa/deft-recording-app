@@ -20,12 +20,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // Session exists but appUser not loaded yet (DB trigger delay)
   if (appUser === null && !loading) {
-    // Allow /setup page through
-    if (location.pathname === "/setup") {
+    // Allow main page through
+    if (location.pathname === "/") {
       return <>{children}</>;
     }
-    // Redirect to setup so user can set their nickname
-    return <Navigate to="/setup" replace />;
+    // Redirect to main page instead of setup
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
