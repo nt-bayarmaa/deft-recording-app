@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getAppUser } from "@/data/users";
+import { getOrCreateAppUser } from "@/data/users";
 import type { Session } from "@supabase/supabase-js";
 import type { AppUser } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,12 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const load = async () => {
       try {
-        // Small delay to allow the DB trigger to finish creating the user
+        // Small delay to allow the DB trigger to finish creating the user (if any)
         await new Promise((r) => setTimeout(r, 500));
-        const user = await getAppUser(authUserId);
+        const user = await getOrCreateAppUser(authUserId);
         if (!cancelled) setAppUser(user);
       } catch (e) {
         console.error("Failed to load app user:", e);
+        if (!cancelled) setAppUser(null);
       }
     };
     load();

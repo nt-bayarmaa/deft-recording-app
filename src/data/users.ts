@@ -25,6 +25,27 @@ export async function getAppUser(authUserId: string): Promise<AppUser | null> {
   return mapUser(data);
 }
 
+/** Get or create app user - creates row if not found (e.g. new signup, no DB trigger) */
+export async function getOrCreateAppUser(authUserId: string): Promise<AppUser> {
+  const existing = await getAppUser(authUserId);
+  if (existing) return existing;
+
+  const userCode = generateUserCode();
+  const { data, error } = await supabase
+    .from("users")
+    .insert({
+      auth_user_id: authUserId,
+      user_code: userCode,
+      nickname: null,
+      username: null,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return mapUser(data);
+}
+
 /** Get user by id */
 export async function getUserById(userId: string): Promise<AppUser | null> {
   const { data, error } = await supabase

@@ -1,6 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Check, X, Loader2 } from "lucide-react";
-import { useLoanByApprovalToken, useUpdateLoanStatus } from "@/hooks/useQueries";
+import { AppLayout } from "@/components/AppLayout";
+import {
+  useLoanByApprovalToken,
+  useUpdateLoanStatus,
+} from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { formatAmount, formatDate } from "@/data/mock";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +17,12 @@ export default function ApproveLoan() {
   const navigate = useNavigate();
   const { appUser } = useAuth();
   const { toast } = useToast();
-  const { data: loan, isLoading, error, refetch } = useLoanByApprovalToken(token ?? null);
+  const {
+    data: loan,
+    isLoading,
+    error,
+    refetch,
+  } = useLoanByApprovalToken(token ?? null);
   const updateStatus = useUpdateLoanStatus();
   const qc = useQueryClient();
 
@@ -45,40 +54,54 @@ export default function ApproveLoan() {
             qc.invalidateQueries({ queryKey: ["friends"] });
           },
           onError: (err) =>
-            toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" }),
-        }
+            toast({
+              title: "Алдаа",
+              description: (err as Error).message,
+              variant: "destructive",
+            }),
+        },
       );
     } catch (err) {
-      toast({ title: "Алдаа", description: (err as Error).message, variant: "destructive" });
+      toast({
+        title: "Алдаа",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <AppLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
     );
   }
 
   if (error || !loan) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="w-full max-w-sm text-center space-y-4">
-          <h1 className="text-2xl font-semibold">Зээл олдсонгүй</h1>
-          <p className="text-muted-foreground text-sm">
-            Холбоос буруу эсвэл хугацаа дууссан байна.
-          </p>
+      <AppLayout>
+        <div className="min-h-[60vh] flex items-center justify-center p-6">
+          <div className="w-full max-w-sm text-center space-y-4">
+            <h1 className="text-2xl font-semibold">Зээл олдсонгүй</h1>
+            <p className="text-muted-foreground text-sm">
+              Холбоос буруу эсвэл хугацаа дууссан байна.
+            </p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
-  const isAlreadyActioned = loan.status === "completed" || loan.status === "rejected";
+  const isAlreadyActioned =
+    loan.status === "completed" || loan.status === "rejected";
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-sm text-center space-y-6">
+    <AppLayout>
+      <div className="min-h-[60vh] flex items-center justify-center p-6">
+        <div className="w-full max-w-sm text-center space-y-6">
         <h1 className="text-2xl font-semibold">Зээл зөвшөөрөх</h1>
 
         <div className="rounded-2xl border border-border p-5 bg-card space-y-4 text-left">
@@ -109,11 +132,13 @@ export default function ApproveLoan() {
         </div>
 
         {isAlreadyActioned ? (
-          <div className={`rounded-xl border p-4 ${
-            loan.status === "completed"
-              ? "border-positive/30 bg-positive-light text-positive"
-              : "border-negative/30 bg-negative-light text-negative"
-          }`}>
+          <div
+            className={`rounded-xl border p-4 ${
+              loan.status === "completed"
+                ? "border-positive/30 bg-positive-light text-positive"
+                : "border-negative/30 bg-negative-light text-negative"
+            }`}
+          >
             <p className="font-medium">
               {loan.status === "completed" ? "Зөвшөөрсөн" : "Татгалзсан"}
             </p>
@@ -152,7 +177,8 @@ export default function ApproveLoan() {
             Нүүр хуудас руу
           </button>
         )}
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
