@@ -152,14 +152,16 @@ export default function ApproveLoan() {
       <div className="min-h-[60vh] flex items-center justify-center p-6">
         <div className="w-full max-w-sm text-center space-y-6">
           <h1 className="text-2xl font-semibold">
-            {isLender ? "Зээл өгөх зөвшөөрөх" : "Зээл авах зөвшөөрөх"}
+            {isLender
+              ? `Та ${counterpartyName}-д зээл өгсөнөө баталгаажуулна уу`
+              : `Та ${lenderName}-с зээл авснаа баталгаажуулна уу`}
           </h1>
 
           <div className="rounded-2xl border border-border p-5 bg-card space-y-4 text-left">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
-                  {isLender ? "Хэнд зээл өгч байна" : "Хэнээс ирсэн"}
+                  {isLender ? "Зээл авсан хүн" : "Зээл өгсөн хүн"}
                 </span>
                 <span className="font-medium">
                   {isLender ? counterpartyName : lenderName}
@@ -201,7 +203,7 @@ export default function ApproveLoan() {
               {(transaction?.senderBank || transaction?.senderAccount) && (
                 <div className="flex justify-between gap-2">
                   <span className="text-muted-foreground shrink-0">
-                    Зээл илгээсэн данс
+                    Зээл өгсөн хүний данс
                   </span>
                   <span className="text-right tabular-nums">
                     {transaction.senderBank &&
@@ -215,7 +217,7 @@ export default function ApproveLoan() {
                 transaction?.recipientAccount) && (
                 <div className="flex justify-between gap-2">
                   <span className="text-muted-foreground shrink-0">
-                    Зээл хүлээн авсан данс
+                    Зээл авсан хүний данс
                   </span>
                   <span className="text-right tabular-nums">
                     {transaction.recipientBank &&
