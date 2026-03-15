@@ -22,7 +22,11 @@ export type LoanType = "give" | "take";
 export type RepaymentType = "pay" | "receive";
 export type LoanStatus = "pending_borrower_approval" | "completed" | "rejected";
 export type RepaymentStatus = "pending_lender_approval" | "completed" | "rejected";
-export type NotificationType = "loan_request" | "repayment_recorded";
+export type NotificationType =
+  | "loan_request"
+  | "repayment_recorded"
+  | "repayment_approved"
+  | "loan_approved";
 
 export interface Loan {
   id: string;

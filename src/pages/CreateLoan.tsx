@@ -10,6 +10,7 @@ import { useFriends, useCreateLoan, useCreateShadowUserAndFriend, useCreateTrans
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { getFriendDisplayName } from "@/data/users";
+import { createNotification } from "@/data/notifications";
 import type { LoanType } from "@/types";
 
 const LOAN_TYPE_LABELS: Record<LoanType, string> = {
@@ -118,7 +119,31 @@ export default function CreateLoan() {
         createdBy: appUser.id,
       });
 
-      // Step 3: Create transaction if bank info provided
+      // Step 3: Notify counterparty (хүлээн авагч зөвшөөрөх ёстой)
+      const counterpartyId = isGive ? loan.borrowerId : loan.lenderId;
+      const creatorName =
+        appUser?.nickname || appUser?.username || appUser?.userCode || "Хэрэглэгч";
+      try {
+        await createNotification({
+          userId: counterpartyId,
+          type: "loan_request",
+          relatedLoanId: loan.id,
+          approvalToken: loan.approvalToken ?? undefined,
+          message: `${creatorName} танд зээл хүсэлт илгээлээ`,
+          amount: loan.amount,
+          currency: loan.currency,
+          personName: creatorName,
+        });
+      } catch (e) {
+        console.error("[CreateLoan] createNotification failed:", e);
+        toast({
+          title: "Мэдэгдэл илгээгдээгүй",
+          description: (e as Error)?.message ?? "Мэдэгдэл хадгалахад алдаа гарлаа.",
+          variant: "destructive",
+        });
+      }
+
+      // Step 4: Create transaction if bank info provided
       if (showBankInfo && (senderBank !== "other" || senderAccount || recipientBank !== "other" || recipientAccount)) {
         await createTransaction.mutateAsync({
           type: "loan_created",
@@ -133,7 +158,7 @@ export default function CreateLoan() {
         });
       }
 
-      // Step 4: Show success modal
+      // Step 5: Show success modal
       setSuccessModal({
         open: true,
         approvalToken: loan.approvalToken ?? "",

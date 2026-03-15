@@ -145,7 +145,7 @@ export default function RecordRepayment() {
           if (repaymentType === "pay") {
             toast({
               title: "Бүртгэгдлээ",
-              description: "Зээл өгсөн хүн зөвшөөрнө хүртэл хүлээнэ үү.",
+              description: "Зээл өгсөн хүн зөвшөөрөх хүртэл түр хүлээнэ үү.",
             });
           }
           navigate("/", { replace: true });

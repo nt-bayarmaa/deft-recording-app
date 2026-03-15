@@ -9,6 +9,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { formatAmount, formatDate } from "@/data/mock";
 import { useToast } from "@/hooks/use-toast";
+import { createNotification } from "@/data/notifications";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function ApproveRepayment() {
@@ -30,16 +31,37 @@ export default function ApproveRepayment() {
   const borrowerName = repayment?.personName ?? "—";
 
   const handleAction = (status: "completed" | "rejected") => {
-    if (!repayment || !appUser) return;
+    if (!repayment || !appUser || !loan) return;
 
     updateStatus.mutate(
       { id: repayment.id, status, approvedBy: appUser.id },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           refetch();
           qc.invalidateQueries({ queryKey: ["repayments"] });
           qc.invalidateQueries({ queryKey: ["balances"] });
           qc.invalidateQueries({ queryKey: ["notifications"] });
+          if (repayment.createdBy) {
+            const lenderName =
+              appUser?.nickname || appUser?.username || appUser?.userCode || "Хэрэглэгч";
+            try {
+              await createNotification({
+                userId: repayment.createdBy,
+                type: "repayment_approved",
+                relatedRepaymentId: repayment.id,
+                relatedLoanId: loan.id,
+                message:
+                  status === "completed"
+                    ? `${lenderName} таны төлбөрийг зөвшөөрлөө`
+                    : `${lenderName} таны төлбөрийг татгалзлаа`,
+                amount: repayment.amount,
+                currency: repayment.currency,
+                personName: lenderName,
+              });
+            } catch (e) {
+              console.error("[ApproveRepayment] createNotification failed:", e);
+            }
+          }
           navigate("/", { replace: true });
         },
         onError: (err) =>

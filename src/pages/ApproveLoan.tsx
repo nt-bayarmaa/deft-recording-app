@@ -22,6 +22,7 @@ import {
   getUserById,
   removeFriendLinksToShadow,
 } from "@/data/users";
+import { createNotification } from "@/data/notifications";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function ApproveLoan() {
@@ -96,11 +97,32 @@ export default function ApproveLoan() {
       updateStatus.mutate(
         { id: loan.id, status, approvedBy: appUser.id },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
             refetch();
             qc.invalidateQueries({ queryKey: ["loans"] });
             qc.invalidateQueries({ queryKey: ["balances"] });
             qc.invalidateQueries({ queryKey: ["friends"] });
+            qc.invalidateQueries({ queryKey: ["notifications"] });
+            if (loan.createdBy) {
+              const approverName =
+                appUser?.nickname || appUser?.username || appUser?.userCode || "Хэрэглэгч";
+              try {
+                await createNotification({
+                  userId: loan.createdBy,
+                  type: "loan_approved",
+                  relatedLoanId: loan.id,
+                  message:
+                    status === "completed"
+                      ? `${approverName} таны зээлийн хүсэлтийг зөвшөөрлөө`
+                      : `${approverName} таны зээлийн хүсэлтийг татгалзлаа`,
+                  amount: loan.amount,
+                  currency: loan.currency,
+                  personName: approverName,
+                });
+              } catch (e) {
+                console.error("[ApproveLoan] createNotification failed:", e);
+              }
+            }
           },
           onError: (err) =>
             toast({
