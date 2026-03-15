@@ -26,6 +26,7 @@ export type NotificationType =
   | "loan_request"
   | "repayment_recorded"
   | "repayment_approved"
+  | "repayment_received"
   | "loan_approved";
 
 export interface Loan {

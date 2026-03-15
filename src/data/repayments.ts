@@ -98,6 +98,18 @@ export async function getRepaymentByApprovalToken(token: string): Promise<Repaym
   return mapRepayment(data);
 }
 
+/** Total repaid amount for a loan (completed repayments only) */
+export async function getTotalRepaidForLoan(loanId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("repayments")
+    .select("amount")
+    .eq("loan_id", loanId)
+    .eq("status", "completed");
+
+  if (error) throw error;
+  return (data ?? []).reduce((sum, r) => sum + Number(r.amount), 0);
+}
+
 /** Repayments awaiting lender approval (төлбөр төлөлт баталгаажуулах) */
 export async function getPendingRepaymentsForLender(
   lenderUserId: string

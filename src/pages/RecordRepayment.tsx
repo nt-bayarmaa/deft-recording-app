@@ -13,6 +13,8 @@ import {
   useCreateTransaction,
 } from "@/hooks/useQueries";
 import { createNotification } from "@/data/notifications";
+import { getTotalRepaidForLoan } from "@/data/repayments";
+import { formatAmount } from "@/data/mock";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import type { RepaymentType } from "@/types";
@@ -115,6 +117,41 @@ export default function RecordRepayment() {
                 personName: borrowerName,
               });
             } catch (e) {
+              toast({
+                title: "Анхааруулга",
+                description: "Мэдэгдэл илгээгдээгүй.",
+                variant: "destructive",
+              });
+            }
+          }
+          // Төлбөр авах: borrower-т notification (таны зээл амжилттай бүртгэгдлээ + үлдэгдэл)
+          if (repaymentType === "receive" && selectedPerson) {
+            const lenderName =
+              appUser?.nickname ||
+              appUser?.username ||
+              appUser?.userCode ||
+              "Хэрэглэгч";
+            try {
+              const loanData = userLoans.find((l) => l.id === repayment.loanId);
+              const loanAmount = Number(loanData?.amount ?? 0);
+              const totalRepaid = await getTotalRepaidForLoan(repayment.loanId);
+              const remaining = loanAmount - totalRepaid;
+              const message =
+                remaining > 0
+                  ? `${lenderName} таны зээлийг амжилттай бүртгэлээ. Үлдэгдэл: ${formatAmount(remaining, repayment.currency)}`
+                  : `${lenderName} таны зээлийг амжилттай бүртгэлээ. Зээл төлөгдөж дууссан.`;
+              await createNotification({
+                userId: selectedPerson,
+                type: "repayment_received",
+                relatedRepaymentId: repayment.id,
+                relatedLoanId: repayment.loanId,
+                message,
+                amount: repayment.amount,
+                currency: repayment.currency,
+                personName: lenderName,
+              });
+            } catch (e) {
+              console.error("[RecordRepayment] createNotification (receive) failed:", e);
               toast({
                 title: "Анхааруулга",
                 description: "Мэдэгдэл илгээгдээгүй.",
