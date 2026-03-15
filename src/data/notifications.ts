@@ -28,19 +28,27 @@ export async function createNotification(insert: {
   amount: number;
   currency: string;
   personName: string;
-}): Promise<void> {
-  const { error } = await supabase.from("notifications").insert({
-    user_id: insert.userId,
-    type: insert.type,
-    related_loan_id: insert.relatedLoanId ?? null,
-    related_repayment_id: insert.relatedRepaymentId ?? null,
-    approval_token: insert.approvalToken ?? null,
-    message: insert.message,
-    amount: insert.amount,
-    currency: insert.currency,
-    person_name: insert.personName,
-  });
-  if (error) throw error;
+}): Promise<{ id: string }> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .insert({
+      user_id: insert.userId,
+      type: insert.type,
+      related_loan_id: insert.relatedLoanId ?? null,
+      related_repayment_id: insert.relatedRepaymentId ?? null,
+      approval_token: insert.approvalToken ?? null,
+      message: insert.message,
+      amount: insert.amount,
+      currency: insert.currency,
+      person_name: insert.personName,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    console.error("[createNotification] Supabase error:", error);
+    throw error;
+  }
+  return { id: data.id };
 }
 
 export async function getNotifications(userId: string): Promise<Notification[]> {
