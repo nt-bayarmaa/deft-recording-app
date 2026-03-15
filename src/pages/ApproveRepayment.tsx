@@ -109,12 +109,16 @@ export default function ApproveRepayment() {
     <AppLayout>
       <div className="min-h-[60vh] flex items-center justify-center p-6">
         <div className="w-full max-w-sm text-center space-y-6">
-          <h1 className="text-2xl font-semibold">Төлбөр зөвшөөрөх</h1>
+          <h1 className="text-2xl font-semibold">
+            Та {borrowerName}-с төлбөр хүлээн авснаа баталгаажуулна уу
+          </h1>
 
           <div className="rounded-2xl border border-border p-5 bg-card space-y-4 text-left">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Хэн төлсөн</span>
+                <span className="text-muted-foreground">
+                  Төлбөр төлсөн хүн (зээл авсан хүн)
+                </span>
                 <span className="font-medium">{borrowerName}</span>
               </div>
               <div className="flex justify-between">

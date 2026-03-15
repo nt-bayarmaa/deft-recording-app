@@ -71,7 +71,7 @@ export async function getPersonBalances(appUserId: string): Promise<PersonBalanc
       continue;
     }
 
-    if (loan.status === "completed") {
+    if (loan.status === "completed" || loan.status === "approved") {
       const loanAmount = Number(loan.amount);
       const repaid = repaymentsByLoan.get(loan.id) ?? 0;
       const remaining = loanAmount - repaid;

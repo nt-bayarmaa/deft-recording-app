@@ -97,3 +97,27 @@ export async function getRepaymentByApprovalToken(token: string): Promise<Repaym
   if (!data) return null;
   return mapRepayment(data);
 }
+
+/** Repayments awaiting lender approval (төлбөр төлөлт баталгаажуулах) */
+export async function getPendingRepaymentsForLender(
+  lenderUserId: string
+): Promise<Repayment[]> {
+  const { data: loansData, error: loansError } = await supabase
+    .from("loans")
+    .select("id")
+    .eq("lender_id", lenderUserId);
+
+  if (loansError) throw loansError;
+  if (!loansData?.length) return [];
+
+  const loanIds = loansData.map((l) => l.id);
+  const { data, error } = await supabase
+    .from("repayments")
+    .select("*")
+    .in("loan_id", loanIds)
+    .eq("status", "pending_lender_approval")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data.map(mapRepayment);
+}

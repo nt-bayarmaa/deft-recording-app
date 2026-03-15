@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getFriends, addFriend, createShadowUser } from "@/data/users";
 import { getLoans, getLoansForPerson, getActiveLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken, getLoanById } from "@/data/loans";
 import { getPeopleForRepayment } from "@/data/balances";
-import { getRepayments, createRepayment, updateRepaymentStatus, getRepaymentByApprovalToken } from "@/data/repayments";
+import { getRepayments, createRepayment, updateRepaymentStatus, getRepaymentByApprovalToken, getPendingRepaymentsForLender } from "@/data/repayments";
 import { getNotifications, markNotificationAsRead } from "@/data/notifications";
 import { createTransaction, getTransactionByLoanId } from "@/data/transactions";
 import { getUserById } from "@/data/users";
@@ -142,6 +142,15 @@ export function useRepaymentByApprovalToken(token: string | null) {
     queryKey: ["repayment", "approval", token],
     queryFn: () => getRepaymentByApprovalToken(token!),
     enabled: !!token,
+  });
+}
+
+export function usePendingRepaymentsForLender() {
+  const userId = useAppUserId();
+  return useQuery({
+    queryKey: ["repayments", "pending", userId],
+    queryFn: () => getPendingRepaymentsForLender(userId),
+    enabled: !!userId,
   });
 }
 

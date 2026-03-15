@@ -61,7 +61,10 @@ export async function getLoansForPerson(userId: string, personId: string): Promi
   }));
 }
 
-/** Active loans (remaining balance > 0) for repayment flow, filtered by direction. */
+/** Active loans (remaining balance > 0) for repayment flow, filtered by direction.
+ * pay: зээл авсан - надад зээл өгсөн хүнээс авсан зээл (lender=personId, borrower=userId)
+ * receive: зээл өгсөн - надаас зээл авсан хүнээс авах төлбөр (lender=userId, borrower=personId)
+ */
 export async function getActiveLoansForPerson(
   userId: string,
   personId: string,
@@ -74,7 +77,7 @@ export async function getActiveLoansForPerson(
   const { data: loansData, error: loansError } = await supabase
     .from("loans")
     .select("id, amount, loan_date, due_date, memo")
-    .eq("status", "completed")
+    .in("status", ["completed", "approved"])
     .eq("lender_id", lenderId)
     .eq("borrower_id", borrowerId)
     .order("loan_date", { ascending: false });
