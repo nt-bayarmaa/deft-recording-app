@@ -42,12 +42,17 @@ export async function getLoans(userId: string): Promise<Loan[]> {
   return data.map(mapLoan);
 }
 
-export async function getLoansForPerson(userId: string, personId: string): Promise<LoanSelectItem[]> {
+export async function getLoansForPerson(
+  userId: string,
+  personId: string,
+): Promise<LoanSelectItem[]> {
   const { data, error } = await supabase
     .from("loans")
     .select("id, amount, loan_date, due_date, memo")
     .eq("status", "completed")
-    .or(`and(lender_id.eq.${userId},borrower_id.eq.${personId}),and(lender_id.eq.${personId},borrower_id.eq.${userId})`)
+    .or(
+      `and(lender_id.eq.${userId},borrower_id.eq.${personId}),and(lender_id.eq.${personId},borrower_id.eq.${userId})`,
+    )
     .order("loan_date", { ascending: false });
 
   if (error) throw error;
@@ -68,7 +73,7 @@ export async function getLoansForPerson(userId: string, personId: string): Promi
 export async function getActiveLoansForPerson(
   userId: string,
   personId: string,
-  repaymentType: RepaymentType
+  repaymentType: RepaymentType,
 ): Promise<LoanSelectItem[]> {
   const isPay = repaymentType === "pay";
   const lenderId = isPay ? personId : userId;
@@ -96,7 +101,10 @@ export async function getActiveLoansForPerson(
 
   const repaidByLoan = new Map<string, number>();
   for (const r of repaymentsData ?? []) {
-    repaidByLoan.set(r.loan_id, (repaidByLoan.get(r.loan_id) ?? 0) + Number(r.amount));
+    repaidByLoan.set(
+      r.loan_id,
+      (repaidByLoan.get(r.loan_id) ?? 0) + Number(r.amount),
+    );
   }
 
   return loansData
@@ -115,7 +123,10 @@ export async function getActiveLoansForPerson(
 }
 
 export async function createLoan(
-  insert: Omit<Loan, "id" | "createdAt" | "status" | "approvedBy" | "approvedAt">
+  insert: Omit<
+    Loan,
+    "id" | "createdAt" | "status" | "approvedBy" | "approvedAt"
+  >,
 ): Promise<Loan> {
   const approvalToken = insert.approvalToken || generateApprovalToken();
 
@@ -143,7 +154,7 @@ export async function createLoan(
 export async function updateLoanStatus(
   id: string,
   status: LoanStatus,
-  approvedBy?: string
+  approvedBy?: string,
 ): Promise<Loan> {
   const update: Record<string, unknown> = { status };
   if (approvedBy) {
@@ -163,7 +174,10 @@ export async function updateLoanStatus(
 }
 
 /** Update borrower_id (for shadow user merge) */
-export async function updateLoanBorrower(loanId: string, newBorrowerId: string): Promise<void> {
+export async function updateLoanBorrower(
+  loanId: string,
+  newBorrowerId: string,
+): Promise<void> {
   const { error } = await supabase
     .from("loans")
     .update({ borrower_id: newBorrowerId })
@@ -175,7 +189,7 @@ export async function updateLoanBorrower(loanId: string, newBorrowerId: string):
 /** Replace shadow user with real user in all loans (lender_id, borrower_id, created_by, approved_by) */
 export async function replaceShadowInLoans(
   shadowId: string,
-  realUserId: string
+  realUserId: string,
 ): Promise<void> {
   const { error: e1 } = await supabase
     .from("loans")
@@ -214,7 +228,9 @@ export async function getLoanById(id: string): Promise<Loan | null> {
   return mapLoan(data);
 }
 
-export async function getLoanByApprovalToken(token: string): Promise<Loan | null> {
+export async function getLoanByApprovalToken(
+  token: string,
+): Promise<Loan | null> {
   const { data, error } = await supabase
     .from("loans")
     .select("*")

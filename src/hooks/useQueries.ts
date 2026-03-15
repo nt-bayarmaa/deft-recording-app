@@ -1,8 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getFriends, addFriend, createShadowUser } from "@/data/users";
-import { getLoans, getLoansForPerson, getActiveLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken, getLoanById } from "@/data/loans";
+import {
+  getLoans,
+  getLoansForPerson,
+  getActiveLoansForPerson,
+  createLoan,
+  updateLoanStatus,
+  getLoanByApprovalToken,
+  getLoanById,
+} from "@/data/loans";
 import { getPeopleForRepayment } from "@/data/balances";
-import { getRepayments, createRepayment, updateRepaymentStatus, getRepaymentByApprovalToken, getPendingRepaymentsForLender } from "@/data/repayments";
+import {
+  getRepayments,
+  createRepayment,
+  updateRepaymentStatus,
+  getRepaymentByApprovalToken,
+  getPendingRepaymentsForLender,
+} from "@/data/repayments";
 import { getNotifications, markNotificationAsRead } from "@/data/notifications";
 import { createTransaction, getTransactionByLoanId } from "@/data/transactions";
 import { getUserById } from "@/data/users";
@@ -49,8 +63,15 @@ export function useUpdateLoanStatus() {
   const qc = useQueryClient();
   const userId = useAppUserId();
   return useMutation({
-    mutationFn: ({ id, status, approvedBy }: { id: string; status: Parameters<typeof updateLoanStatus>[1]; approvedBy?: string }) =>
-      updateLoanStatus(id, status, approvedBy),
+    mutationFn: ({
+      id,
+      status,
+      approvedBy,
+    }: {
+      id: string;
+      status: Parameters<typeof updateLoanStatus>[1];
+      approvedBy?: string;
+    }) => updateLoanStatus(id, status, approvedBy),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["balances"] });
@@ -76,7 +97,10 @@ export function usePeopleForRepayment(repaymentType: "pay" | "receive") {
   });
 }
 
-export function useActiveLoansForPerson(personId: string, repaymentType: "pay" | "receive") {
+export function useActiveLoansForPerson(
+  personId: string,
+  repaymentType: "pay" | "receive",
+) {
   const userId = useAppUserId();
   return useQuery({
     queryKey: ["loans", "active", userId, personId, repaymentType],
@@ -158,8 +182,15 @@ export function useUpdateRepaymentStatus() {
   const qc = useQueryClient();
   const userId = useAppUserId();
   return useMutation({
-    mutationFn: ({ id, status, approvedBy }: { id: string; status: "completed" | "rejected"; approvedBy: string }) =>
-      updateRepaymentStatus(id, status, approvedBy),
+    mutationFn: ({
+      id,
+      status,
+      approvedBy,
+    }: {
+      id: string;
+      status: "completed" | "rejected";
+      approvedBy: string;
+    }) => updateRepaymentStatus(id, status, approvedBy),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["repayments"] });
       qc.invalidateQueries({ queryKey: ["balances", userId] });
@@ -208,6 +239,7 @@ export function useMarkNotificationAsRead() {
   const userId = appUser?.id ?? "";
   return useMutation({
     mutationFn: (id: string) => markNotificationAsRead(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", userId] }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["notifications", userId] }),
   });
 }
