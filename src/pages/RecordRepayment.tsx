@@ -150,11 +150,15 @@ export default function RecordRepayment() {
                 currency: repayment.currency,
                 personName: lenderName,
               });
+              toast({
+                title: "Бүртгэгдлээ",
+                description: "Зээлдэгч рүү мэдэгдэл илгээгдлээ.",
+              });
             } catch (e) {
               console.error("[RecordRepayment] createNotification (receive) failed:", e);
               toast({
-                title: "Анхааруулга",
-                description: "Мэдэгдэл илгээгдээгүй.",
+                title: "Мэдэгдэл илгээгдээгүй",
+                description: (e as Error)?.message ?? "Зээлдэгч рүү мэдэгдэл хадгалахад алдаа гарлаа.",
                 variant: "destructive",
               });
             }

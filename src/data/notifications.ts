@@ -51,7 +51,7 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data.map(mapNotification);
+  return (data ?? []).map(mapNotification);
 }
 
 export async function markNotificationAsRead(id: string): Promise<void> {

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import {
@@ -10,7 +11,12 @@ import { Bell } from "lucide-react";
 
 export default function Notifications() {
   const navigate = useNavigate();
-  const { data: notifications = [], isLoading, error } = useNotifications();
+  const { data: notifications = [], isLoading, error, refetch } = useNotifications();
+
+  // Notifications хуудас нээхэд шинэ мэдэгдлийг татах
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
   const markAsRead = useMarkNotificationAsRead();
 
   const handleView = (notif: (typeof notifications)[0]) => {
