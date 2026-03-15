@@ -10,7 +10,7 @@ export default function Profile() {
   const { session, appUser } = useAuth();
   const navigate = useNavigate();
   const email = session?.user?.email ?? "";
-  const displayName = appUser?.nickname || appUser?.username || email.split("@")[0];
+  const displayName = appUser?.username || email.split("@")[0];
   const userCode = appUser?.userCode ?? "";
 
   const handleCopy = () => {
@@ -21,7 +21,9 @@ export default function Profile() {
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ text: `Миний Авлага өглөг бүртгэл апп код: ${userCode}` });
+        await navigator.share({
+          text: `Миний Авлага өглөг бүртгэл апп код: ${userCode}`,
+        });
       } catch {}
     } else {
       handleCopy();
@@ -49,7 +51,9 @@ export default function Profile() {
 
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">Хэрэглэгчийн код</p>
-            <p className="text-lg font-mono font-bold tracking-widest">{userCode}</p>
+            <p className="text-lg font-mono font-bold tracking-widest">
+              {userCode}
+            </p>
           </div>
 
           <div className="flex justify-center p-4 bg-muted/30 rounded-xl">

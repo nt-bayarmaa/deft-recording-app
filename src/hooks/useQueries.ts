@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getFriends, addFriend, createShadowUser } from "@/data/users";
-import { getLoans, getLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken } from "@/data/loans";
+import { getLoans, getLoansForPerson, getActiveLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken } from "@/data/loans";
+import { getPeopleForRepayment } from "@/data/balances";
 import { getRepayments, createRepayment } from "@/data/repayments";
 import { getNotifications, markNotificationAsRead } from "@/data/notifications";
 import { createTransaction, getTransactionByLoanId } from "@/data/transactions";
@@ -66,6 +67,24 @@ export function useLoansForPerson(personId: string) {
   });
 }
 
+export function usePeopleForRepayment(repaymentType: "pay" | "receive") {
+  const userId = useAppUserId();
+  return useQuery({
+    queryKey: ["peopleForRepayment", userId, repaymentType],
+    queryFn: () => getPeopleForRepayment(userId, repaymentType),
+    enabled: !!userId,
+  });
+}
+
+export function useActiveLoansForPerson(personId: string, repaymentType: "pay" | "receive") {
+  const userId = useAppUserId();
+  return useQuery({
+    queryKey: ["loans", "active", userId, personId, repaymentType],
+    queryFn: () => getActiveLoansForPerson(userId, personId, repaymentType),
+    enabled: !!userId && !!personId,
+  });
+}
+
 export function useLoanByApprovalToken(token: string | null) {
   return useQuery({
     queryKey: ["loan", "approval", token],
@@ -103,6 +122,8 @@ export function useCreateRepayment() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["repayments"] });
       qc.invalidateQueries({ queryKey: ["balances", userId] });
+      qc.invalidateQueries({ queryKey: ["loans"] });
+      qc.invalidateQueries({ queryKey: ["peopleForRepayment", userId] });
     },
   });
 }

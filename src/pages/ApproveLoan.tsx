@@ -55,23 +55,41 @@ export default function ApproveLoan() {
       counterpartyId?.slice(0, 8)) ??
     "—";
   const lenderName =
-    (lender?.nickname || lender?.username || lender?.userCode || loan?.lenderId?.slice(0, 8)) ?? "—";
+    (lender?.nickname ||
+      lender?.username ||
+      lender?.userCode ||
+      loan?.lenderId?.slice(0, 8)) ??
+    "—";
+  const isLender = loan && appUser && loan.lenderId === appUser.id;
   const lenderEmail = lender?.email ?? "";
+  const borrowerEmail = counterparty?.email ?? "";
+  const displayEmail = isLender ? borrowerEmail : lenderEmail;
+  const emailLabel = isLender ? "Зээл авсан хүний и-мэйл" : "Зээл өгсөн хүний и-мэйл";
 
   const handleAction = async (status: "completed" | "rejected") => {
     if (!loan || !appUser) return;
 
     try {
-      // Check if borrower is a shadow user and merge if needed
+      // Check if borrower or lender is a shadow user and merge if needed
       if (status === "completed") {
         const borrower = await getUserById(loan.borrowerId);
+        const lenderUser = await getUserById(loan.lenderId);
+
+        // Borrower is shadow (зээл өгөх: borrower clicks approval link)
         if (borrower && !borrower.authUserId && borrower.id !== appUser.id) {
-          // Shadow merge: 1) replace in loans 2) fix friends 3) addFriend with lender's label (shadow.username) 4) delete shadow
           await replaceShadowInLoans(borrower.id, appUser.id);
           await removeFriendLinksToShadow(borrower.id);
           await addFriend(loan.lenderId, appUser.id, borrower.username);
           await addFriend(appUser.id, loan.lenderId);
           await deleteShadowUser(borrower.id);
+        }
+        // Lender is shadow (зээл авах: lender clicks approval link)
+        else if (lenderUser && !lenderUser.authUserId && lenderUser.id !== appUser.id) {
+          await replaceShadowInLoans(lenderUser.id, appUser.id);
+          await removeFriendLinksToShadow(lenderUser.id);
+          await addFriend(loan.borrowerId, appUser.id, lenderUser.username);
+          await addFriend(appUser.id, loan.borrowerId);
+          await deleteShadowUser(lenderUser.id);
         }
       }
 
@@ -133,30 +151,28 @@ export default function ApproveLoan() {
     <AppLayout>
       <div className="min-h-[60vh] flex items-center justify-center p-6">
         <div className="w-full max-w-sm text-center space-y-6">
-          <h1 className="text-2xl font-semibold">Зээл зөвшөөрөх</h1>
+          <h1 className="text-2xl font-semibold">
+            {isLender ? "Зээл өгөх зөвшөөрөх" : "Зээл авах зөвшөөрөх"}
+          </h1>
 
           <div className="rounded-2xl border border-border p-5 bg-card space-y-4 text-left">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
-                  {loan && appUser && loan.lenderId === appUser.id
-                    ? "Хэнд зээл өгч байна"
-                    : "Хэнээс ирсэн"}
+                  {isLender ? "Хэнд зээл өгч байна" : "Хэнээс ирсэн"}
                 </span>
                 <span className="font-medium">
-                  {loan && appUser && loan.lenderId === appUser.id
-                    ? counterpartyName
-                    : lenderName}
+                  {isLender ? counterpartyName : lenderName}
                 </span>
               </div>
-              {lenderEmail && (
+              {displayEmail && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Зээл өгсөн хүний и-мэйл</span>
+                  <span className="text-muted-foreground">{emailLabel}</span>
                   <span
                     className="text-right max-w-[60%] truncate"
-                    title={lenderEmail}
+                    title={displayEmail}
                   >
-                    {lenderEmail}
+                    {displayEmail}
                   </span>
                 </div>
               )}
@@ -225,7 +241,9 @@ export default function ApproveLoan() {
               </p>
               <p className="text-sm mt-1">
                 {loan.status === "completed"
-                  ? "Зээл амжилттай зөвшөөрөгдлөө."
+                  ? isLender
+                    ? `${counterpartyName}-д ${formatAmount(loan.amount, loan.currency)} зээл өгөв.`
+                    : `${lenderName}-с ${formatAmount(loan.amount, loan.currency)} зээл авав.`
                   : "Зээлийг татгалзлаа."}
               </p>
             </div>

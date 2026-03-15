@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Loan, LoanStatus, LoanSelectItem } from "@/types";
+import type { RepaymentType } from "@/types";
 
 function generateApprovalToken(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -58,6 +59,56 @@ export async function getLoansForPerson(userId: string, personId: string): Promi
     dueDate: row.due_date,
     memo: row.memo ?? "",
   }));
+}
+
+/** Active loans (remaining balance > 0) for repayment flow, filtered by direction. */
+export async function getActiveLoansForPerson(
+  userId: string,
+  personId: string,
+  repaymentType: RepaymentType
+): Promise<LoanSelectItem[]> {
+  const isPay = repaymentType === "pay";
+  const lenderId = isPay ? personId : userId;
+  const borrowerId = isPay ? userId : personId;
+
+  const { data: loansData, error: loansError } = await supabase
+    .from("loans")
+    .select("id, amount, loan_date, due_date, memo")
+    .eq("status", "completed")
+    .eq("lender_id", lenderId)
+    .eq("borrower_id", borrowerId)
+    .order("loan_date", { ascending: false });
+
+  if (loansError) throw loansError;
+  if (!loansData?.length) return [];
+
+  const loanIds = loansData.map((l) => l.id);
+  const { data: repaymentsData, error: repaymentsError } = await supabase
+    .from("repayments")
+    .select("loan_id, amount")
+    .in("loan_id", loanIds)
+    .eq("status", "completed");
+
+  if (repaymentsError) throw repaymentsError;
+
+  const repaidByLoan = new Map<string, number>();
+  for (const r of repaymentsData ?? []) {
+    repaidByLoan.set(r.loan_id, (repaidByLoan.get(r.loan_id) ?? 0) + Number(r.amount));
+  }
+
+  return loansData
+    .filter((row) => {
+      const amount = Number(row.amount);
+      const repaid = repaidByLoan.get(row.id) ?? 0;
+      return amount - repaid > 0;
+    })
+    .map((row) => ({
+      id: row.id,
+      amount: row.amount,
+      loanDate: row.loan_date,
+      dueDate: row.due_date,
+      memo: row.memo ?? "",
+    }));
 }
 
 export async function createLoan(

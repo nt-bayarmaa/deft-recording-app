@@ -1,5 +1,27 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PersonBalance } from "@/types";
+import type { RepaymentType } from "@/types";
+
+/** People who have active loans with the user for repayment flow.
+ * pay: people we owe (we borrowed from them)
+ * receive: people who owe us (they borrowed from us)
+ */
+export async function getPeopleForRepayment(
+  appUserId: string,
+  repaymentType: RepaymentType
+): Promise<{ personId: string; name: string }[]> {
+  const balances = await getPersonBalances(appUserId);
+  const sign = repaymentType === "pay" ? -1 : 1;
+  const seen = new Set<string>();
+  return balances
+    .filter((b) => b.balance * sign > 0)
+    .filter((b) => {
+      if (seen.has(b.personId)) return false;
+      seen.add(b.personId);
+      return true;
+    })
+    .map((b) => ({ personId: b.personId, name: b.name }));
+}
 
 export async function getPersonBalances(appUserId: string): Promise<PersonBalance[]> {
   const [loansRes, repaymentsRes, friendsRes] = await Promise.all([

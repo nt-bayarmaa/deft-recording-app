@@ -6,8 +6,7 @@ import { LoanSelect } from "@/components/LoanSelect";
 import { AmountInput } from "@/components/AmountInput";
 import { DatePicker } from "@/components/DatePicker";
 import { BankAccountInput } from "@/components/BankAccountInput";
-import { getFriendDisplayName } from "@/data/users";
-import { useFriends, useLoansForPerson, useCreateRepayment, useCreateTransaction } from "@/hooks/useQueries";
+import { usePeopleForRepayment, useActiveLoansForPerson, useCreateRepayment, useCreateTransaction } from "@/hooks/useQueries";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import type { RepaymentType } from "@/types";
@@ -25,13 +24,13 @@ export default function RecordRepayment() {
   const repaymentType: RepaymentType = type === "pay" || type === "receive" ? type : "pay";
   const { appUser } = useAuth();
   const { toast } = useToast();
-  const { data: friendsData = [] } = useFriends();
+  const { data: peopleForRepayment = [] } = usePeopleForRepayment(repaymentType);
   const createRepayment = useCreateRepayment();
   const createTransaction = useCreateTransaction();
 
-  const friendOptions = friendsData.map((f) => ({
-    id: f.friendId,
-    name: getFriendDisplayName(f.nickname, f.friend),
+  const personOptions = peopleForRepayment.map((p) => ({
+    id: p.personId,
+    name: p.name,
   }));
 
   const [selectedPerson, setSelectedPerson] = useState("");
@@ -46,13 +45,13 @@ export default function RecordRepayment() {
   const [recipientBank, setRecipientBank] = useState("other");
   const [recipientAccount, setRecipientAccount] = useState("");
 
-  const { data: userLoans = [] } = useLoansForPerson(selectedPerson);
+  const { data: userLoans = [] } = useActiveLoansForPerson(selectedPerson, repaymentType);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPerson || !selectedLoan || !appUser) return;
 
-    const personName = friendOptions.find((f) => f.id === selectedPerson)?.name ?? "";
+    const personName = personOptions.find((p) => p.id === selectedPerson)?.name ?? "";
 
     createRepayment.mutate(
       {
@@ -112,7 +111,7 @@ export default function RecordRepayment() {
               {repaymentType === "pay" ? "Төлбөр төлөх хүн" : "Төлбөр авсан хүн"}
             </label>
             <ContactSelect
-              friends={friendOptions}
+              friends={personOptions}
               value={selectedPerson}
               onValueChange={(v) => { setSelectedPerson(v); setSelectedLoan(""); }}
             />
