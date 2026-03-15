@@ -115,12 +115,9 @@ export default function RecordRepayment() {
                 personName: borrowerName,
               });
             } catch (e) {
-              console.error("[RecordRepayment] createNotification failed:", e);
               toast({
-                title: "Мэдэгдэл илгээгдээгүй",
-                description:
-                  (e as Error)?.message ||
-                  "Зээл өгсөн хүнд мэдэгдэл хадгалахад алдаа гарлаа.",
+                title: "Анхааруулга",
+                description: "Мэдэгдэл илгээгдээгүй.",
                 variant: "destructive",
               });
             }
