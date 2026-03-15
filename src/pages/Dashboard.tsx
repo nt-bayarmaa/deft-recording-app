@@ -1,26 +1,32 @@
-import { useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
-import { formatAmount } from "@/data/mock";
+import { useState } from "react";
+import { formatAmount, formatDate } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { getPersonBalances } from "@/data/balances";
+import { useActiveLoans } from "@/hooks/useQueries";
+
+type LoanFilter = "all" | "incoming" | "outgoing";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const { appUser } = useAuth();
   const userId = appUser?.id ?? "";
+  const [loanFilter, setLoanFilter] = useState<LoanFilter>("all");
 
   const {
     data: balances = [],
-    isLoading,
-    error,
+    isLoading: balancesLoading,
+    error: balancesError,
   } = useQuery({
     queryKey: ["balances", userId],
     queryFn: () => getPersonBalances(userId),
     enabled: !!userId,
   });
+
+  const direction: "incoming" | "outgoing" | undefined =
+    loanFilter === "incoming" ? "incoming" : loanFilter === "outgoing" ? "outgoing" : undefined;
+  const { data: activeLoans = [], isLoading: loansLoading } = useActiveLoans(direction);
 
   const totalReceivable = balances
     .filter((b) => b.balance > 0 && b.currency === "MNT")
@@ -33,7 +39,7 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="container px-4 md:px-8 py-6 space-y-6 max-w-2xl mx-auto">
-        {isLoading ? (
+        {balancesLoading ? (
           <div className="space-y-3 animate-pulse">
             <div className="h-32 bg-muted rounded" />
             {[1, 2, 3, 4].map((i) => (
@@ -44,11 +50,11 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        ) : error ? (
+        ) : balancesError ? (
           <div className="text-center py-16 text-destructive space-y-2">
             <p className="text-sm">Алдаа гарлаа</p>
             <p className="text-xs text-muted-foreground">
-              {(error as Error).message}
+              {(balancesError as Error).message}
             </p>
           </div>
         ) : (
@@ -66,52 +72,90 @@ export default function Dashboard() {
                 {formatAmount(Math.abs(netBalance), "MNT")}
               </p>
               <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border">
-                <div className="flex-1 cursor-pointer hover:bg-accent/30 rounded-lg p-2 -m-2 transition-colors" onClick={() => navigate("/history?direction=incoming")}>
+                <div className="flex-1">
                   <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">↑ Авах</p>
                   <p className="font-mono text-lg font-bold text-positive mt-0.5 tabular-nums">+{formatAmount(totalReceivable, "MNT")}</p>
                 </div>
                 <div className="w-px h-8 bg-border" />
-                <div className="flex-1 cursor-pointer hover:bg-accent/30 rounded-lg p-2 -m-2 transition-colors" onClick={() => navigate("/history?direction=outgoing")}>
+                <div className="flex-1">
                   <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">↓ Өгөх</p>
                   <p className="font-mono text-lg font-bold text-negative mt-0.5 tabular-nums">−{formatAmount(totalOwed, "MNT")}</p>
                 </div>
               </div>
             </div>
 
-            {/* Balances — compact, data-dense */}
+            {/* Идэвхтэй зээлүүд — filter-тэй */}
             <div>
-              <div className="flex items-center justify-between mb-2.5">
-                <h2 className="text-xs font-semibold text-foreground uppercase tracking-wide">Үлдэгдэл</h2>
-                <button onClick={() => navigate("/friends")} className="text-[11px] text-muted-foreground font-medium flex items-center gap-0.5 hover:text-foreground transition-colors">
-                  Бүгд <ChevronRight size={11} />
+              <h2 className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2.5">Идэвхтэй зээл</h2>
+              <div className="flex rounded-xl bg-muted/50 p-0.5 gap-0.5 mb-3">
+                <button
+                  onClick={() => setLoanFilter("all")}
+                  className={cn(
+                    "flex-1 text-xs font-semibold py-2 rounded-lg transition-colors",
+                    loanFilter === "all"
+                      ? "bg-card text-foreground shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Бүгд
+                </button>
+                <button
+                  onClick={() => setLoanFilter("incoming")}
+                  className={cn(
+                    "flex-1 text-xs font-semibold py-2 rounded-lg transition-colors",
+                    loanFilter === "incoming"
+                      ? "bg-card text-positive shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  ↑ Авлага
+                </button>
+                <button
+                  onClick={() => setLoanFilter("outgoing")}
+                  className={cn(
+                    "flex-1 text-xs font-semibold py-2 rounded-lg transition-colors",
+                    loanFilter === "outgoing"
+                      ? "bg-card text-negative shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  ↓ Өглөг
                 </button>
               </div>
               <div className="flex flex-col gap-0.5">
-                {balances.length === 0 ? (
-                  <p className="text-[13px] text-muted-foreground py-2">Зээл бүртгэгдээгүй байна</p>
+                {loansLoading ? (
+                  [1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-2.5 py-2.5 px-1">
+                      <div className="w-4 h-4 rounded bg-muted" />
+                      <div className="w-7 h-7 rounded-full bg-muted" />
+                      <div className="h-4 flex-1 rounded bg-muted" />
+                      <div className="w-16 h-4 rounded bg-muted" />
+                    </div>
+                  ))
+                ) : activeLoans.length === 0 ? (
+                  <p className="text-[13px] text-muted-foreground py-2">Идэвхтэй зээл байхгүй</p>
                 ) : (
-                  balances
-                    .filter((b) => b.balance !== 0)
-                    .slice(0, 4)
-                    .map((person) => (
-                      <div
-                        key={`${person.personId}-${person.currency}`}
-                        onClick={() => navigate(`/history?person=${person.personId}`)}
-                        className="flex items-center gap-2.5 py-2.5 px-1 cursor-pointer hover:bg-accent/30 rounded-lg transition-colors"
-                      >
-                        <span className={cn("text-sm shrink-0", person.balance > 0 ? "text-positive" : "text-negative")}>
-                          {person.balance > 0 ? "↑" : "↓"}
-                        </span>
-                        <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-[9px] font-bold text-secondary-foreground shrink-0">
-                          {person.name[0]}
-                        </div>
-                        <span className="text-[13px] font-medium text-foreground flex-1 truncate">{person.name}</span>
-                        <span className={cn("font-mono text-[13px] font-bold tabular-nums", person.balance > 0 ? "text-positive" : "text-negative")}>
-                          {person.balance > 0 ? "+" : "−"}
-                          {formatAmount(Math.abs(person.balance), person.currency)}
-                        </span>
+                  activeLoans.slice(0, 8).map((loan) => (
+                    <div
+                      key={loan.id}
+                      className="flex items-center gap-2.5 py-2.5 px-1"
+                    >
+                      <span className={cn("text-sm shrink-0", loan.isIncoming ? "text-positive" : "text-negative")}>
+                        {loan.isIncoming ? "↑" : "↓"}
+                      </span>
+                      <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-[9px] font-bold text-secondary-foreground shrink-0">
+                        {loan.personName[0] || "?"}
                       </div>
-                    ))
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[13px] font-medium text-foreground truncate block">{loan.personName}</span>
+                        <span className="text-[11px] text-muted-foreground">{formatDate(loan.dueDate)}</span>
+                      </div>
+                      <span className={cn("font-mono text-[13px] font-bold shrink-0 tabular-nums", loan.isIncoming ? "text-positive" : "text-negative")}>
+                        {loan.isIncoming ? "+" : "−"}
+                        {formatAmount(loan.remaining, loan.currency)}
+                      </span>
+                    </div>
+                  ))
                 )}
               </div>
             </div>

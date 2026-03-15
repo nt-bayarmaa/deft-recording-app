@@ -4,6 +4,7 @@ import {
   getLoans,
   getLoansForPerson,
   getActiveLoansForPerson,
+  getActiveLoans,
   createLoan,
   updateLoanStatus,
   getLoanByApprovalToken,
@@ -76,6 +77,15 @@ export function useUpdateLoanStatus() {
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["balances"] });
     },
+  });
+}
+
+export function useActiveLoans(direction?: "incoming" | "outgoing") {
+  const userId = useAppUserId();
+  return useQuery({
+    queryKey: ["activeLoans", userId, direction],
+    queryFn: () => getActiveLoans(userId, direction),
+    enabled: !!userId,
   });
 }
 

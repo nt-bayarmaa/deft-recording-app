@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Loan, LoanStatus, LoanSelectItem } from "@/types";
+import type { Loan, LoanStatus, LoanSelectItem, ActiveLoanItem } from "@/types";
 import type { RepaymentType } from "@/types";
 
 function generateApprovalToken(): string {
@@ -120,6 +120,94 @@ export async function getActiveLoansForPerson(
       dueDate: row.due_date,
       memo: row.memo ?? "",
     }));
+}
+
+/** All active loans (remaining balance > 0) for the user, sorted by due date. */
+export async function getActiveLoans(
+  userId: string,
+  direction?: "incoming" | "outgoing",
+): Promise<ActiveLoanItem[]> {
+  const { data: loansData, error: loansError } = await supabase
+    .from("loans")
+    .select("*")
+    .in("status", ["completed", "approved"])
+    .or(`lender_id.eq.${userId},borrower_id.eq.${userId}`)
+    .order("due_date", { ascending: true });
+
+  if (loansError) throw loansError;
+  if (!loansData?.length) return [];
+
+  const loanIds = loansData.map((l) => l.id);
+  const { data: repaymentsData, error: repaymentsError } = await supabase
+    .from("repayments")
+    .select("loan_id, amount")
+    .in("loan_id", loanIds)
+    .eq("status", "completed");
+
+  if (repaymentsError) throw repaymentsError;
+
+  const repaidByLoan = new Map<string, number>();
+  for (const r of repaymentsData ?? []) {
+    repaidByLoan.set(
+      r.loan_id,
+      (repaidByLoan.get(r.loan_id) ?? 0) + Number(r.amount),
+    );
+  }
+
+  const { data: friendsData, error: friendsError } = await supabase
+    .from("user_friends")
+    .select(
+      "friend_id, nickname, friend:users!user_friends_friend_id_fkey(id, nickname, username, user_code)",
+    )
+    .eq("user_id", userId)
+    .eq("status", "accepted");
+
+  if (friendsError) throw friendsError;
+
+  const nameMap = new Map<string, string>();
+  for (const f of (friendsData ?? []) as any[]) {
+    if (f.friend) {
+      const name =
+        f.nickname ||
+        f.friend.nickname ||
+        f.friend.username ||
+        f.friend.user_code ||
+        f.friend_id.slice(0, 8);
+      nameMap.set(f.friend_id, name);
+    }
+  }
+
+  const items: ActiveLoanItem[] = [];
+  for (const row of loansData) {
+    const loanAmount = Number(row.amount);
+    const repaid = repaidByLoan.get(row.id) ?? 0;
+    const remaining = loanAmount - repaid;
+    if (remaining <= 0) continue;
+
+    const isLender = row.lender_id === userId;
+    const otherId = isLender ? row.borrower_id : row.lender_id;
+    const personName = nameMap.get(otherId) ?? otherId.slice(0, 8);
+
+    if (direction === "incoming" && !isLender) continue;
+    if (direction === "outgoing" && isLender) continue;
+
+    items.push({
+      id: row.id,
+      personId: otherId,
+      personName,
+      amount: loanAmount,
+      remaining,
+      currency: row.currency,
+      dueDate: row.due_date,
+      loanDate: row.loan_date,
+      memo: row.memo ?? "",
+      isIncoming: isLender,
+    });
+  }
+
+  return items.sort(
+    (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+  );
 }
 
 export async function createLoan(

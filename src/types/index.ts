@@ -110,3 +110,17 @@ export interface PersonBalance {
   currency: string;
   hasPending: boolean;
 }
+
+export interface ActiveLoanItem {
+  id: string;
+  personId: string;
+  personName: string;
+  amount: number;
+  remaining: number;
+  currency: string;
+  dueDate: string;
+  loanDate: string;
+  memo: string;
+  /** true = user is lender (receiving), false = user is borrower (owing) */
+  isIncoming: boolean;
+}

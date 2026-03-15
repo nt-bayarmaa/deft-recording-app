@@ -225,10 +225,6 @@ export default function History() {
   return (
     <AppLayout>
       <div className="container px-4 md:px-8 py-6 space-y-6 max-w-2xl mx-auto">
-        <h1 className="text-lg font-bold text-foreground tracking-tight">
-          {pageTitle}
-        </h1>
-
         {isLoading ? (
           <div className="space-y-3 animate-pulse">
             {[1, 2, 3].map((i) => (
