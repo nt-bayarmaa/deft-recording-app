@@ -199,6 +199,18 @@ export async function replaceShadowInLoans(
   if (e4) throw e4;
 }
 
+export async function getLoanById(id: string): Promise<Loan | null> {
+  const { data, error } = await supabase
+    .from("loans")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return mapLoan(data);
+}
+
 export async function getLoanByApprovalToken(token: string): Promise<Loan | null> {
   const { data, error } = await supabase
     .from("loans")

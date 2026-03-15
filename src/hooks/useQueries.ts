@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getFriends, addFriend, createShadowUser } from "@/data/users";
-import { getLoans, getLoansForPerson, getActiveLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken } from "@/data/loans";
+import { getLoans, getLoansForPerson, getActiveLoansForPerson, createLoan, updateLoanStatus, getLoanByApprovalToken, getLoanById } from "@/data/loans";
 import { getPeopleForRepayment } from "@/data/balances";
-import { getRepayments, createRepayment } from "@/data/repayments";
+import { getRepayments, createRepayment, updateRepaymentStatus, getRepaymentByApprovalToken } from "@/data/repayments";
 import { getNotifications, markNotificationAsRead } from "@/data/notifications";
 import { createTransaction, getTransactionByLoanId } from "@/data/transactions";
 import { getUserById } from "@/data/users";
@@ -93,6 +93,14 @@ export function useLoanByApprovalToken(token: string | null) {
   });
 }
 
+export function useLoanById(loanId: string | null) {
+  return useQuery({
+    queryKey: ["loan", loanId],
+    queryFn: () => getLoanById(loanId!),
+    enabled: !!loanId,
+  });
+}
+
 export function useUserById(userId: string | null) {
   return useQuery({
     queryKey: ["user", userId],
@@ -124,6 +132,31 @@ export function useCreateRepayment() {
       qc.invalidateQueries({ queryKey: ["balances", userId] });
       qc.invalidateQueries({ queryKey: ["loans"] });
       qc.invalidateQueries({ queryKey: ["peopleForRepayment", userId] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+export function useRepaymentByApprovalToken(token: string | null) {
+  return useQuery({
+    queryKey: ["repayment", "approval", token],
+    queryFn: () => getRepaymentByApprovalToken(token!),
+    enabled: !!token,
+  });
+}
+
+export function useUpdateRepaymentStatus() {
+  const qc = useQueryClient();
+  const userId = useAppUserId();
+  return useMutation({
+    mutationFn: ({ id, status, approvedBy }: { id: string; status: "completed" | "rejected"; approvedBy: string }) =>
+      updateRepaymentStatus(id, status, approvedBy),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["repayments"] });
+      qc.invalidateQueries({ queryKey: ["balances", userId] });
+      qc.invalidateQueries({ queryKey: ["loans"] });
+      qc.invalidateQueries({ queryKey: ["peopleForRepayment", userId] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
 }
@@ -151,21 +184,21 @@ export function useCreateShadowUserAndFriend() {
 
 // --- Notifications ---
 export function useNotifications() {
-  const { session } = useAuth();
-  const authUserId = session?.user?.id ?? "";
+  const { appUser } = useAuth();
+  const userId = appUser?.id ?? "";
   return useQuery({
-    queryKey: ["notifications", authUserId],
-    queryFn: () => getNotifications(authUserId),
-    enabled: !!authUserId,
+    queryKey: ["notifications", userId],
+    queryFn: () => getNotifications(userId),
+    enabled: !!userId,
   });
 }
 
 export function useMarkNotificationAsRead() {
   const qc = useQueryClient();
-  const { session } = useAuth();
-  const authUserId = session?.user?.id ?? "";
+  const { appUser } = useAuth();
+  const userId = appUser?.id ?? "";
   return useMutation({
     mutationFn: (id: string) => markNotificationAsRead(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", authUserId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", userId] }),
   });
 }

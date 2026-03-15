@@ -1,6 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Repayment } from "@/types";
 
+function generateApprovalToken(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let token = "";
+  for (let i = 0; i < 32; i++) {
+    token += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return token;
+}
+
 function mapRepayment(row: any): Repayment {
   return {
     id: row.id,
@@ -11,6 +20,7 @@ function mapRepayment(row: any): Repayment {
     memo: row.memo ?? "",
     type: row.type,
     status: row.status,
+    approvalToken: row.approval_token ?? null,
     createdBy: row.created_by,
     approvedBy: row.approved_by,
     personName: row.person_name ?? "",
@@ -29,8 +39,12 @@ export async function getRepayments(): Promise<Repayment[]> {
 }
 
 export async function createRepayment(
-  insert: Omit<Repayment, "id" | "createdAt" | "status" | "approvedBy">
+  insert: Omit<Repayment, "id" | "createdAt" | "status" | "approvedBy" | "approvalToken">
 ): Promise<Repayment> {
+  const isPay = insert.type === "pay";
+  const status = isPay ? "pending_lender_approval" : "completed";
+  const approvalToken = isPay ? generateApprovalToken() : null;
+
   const { data, error } = await supabase
     .from("repayments")
     .insert({
@@ -40,6 +54,8 @@ export async function createRepayment(
       repayment_date: insert.repaymentDate,
       memo: insert.memo,
       type: insert.type,
+      status,
+      approval_token: approvalToken,
       created_by: insert.createdBy,
       person_name: insert.personName,
     })
@@ -67,5 +83,17 @@ export async function updateRepaymentStatus(
     .single();
 
   if (error) throw error;
+  return mapRepayment(data);
+}
+
+export async function getRepaymentByApprovalToken(token: string): Promise<Repayment | null> {
+  const { data, error } = await supabase
+    .from("repayments")
+    .select("*")
+    .eq("approval_token", token)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
   return mapRepayment(data);
 }

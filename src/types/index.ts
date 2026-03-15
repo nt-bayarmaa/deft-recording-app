@@ -51,6 +51,7 @@ export interface Repayment {
   memo: string;
   type: RepaymentType;
   status: RepaymentStatus;
+  approvalToken: string | null;
   createdBy: string | null;
   approvedBy: string | null;
   personName: string;
@@ -77,6 +78,7 @@ export interface Notification {
   type: NotificationType;
   relatedLoanId: string | null;
   relatedRepaymentId: string | null;
+  approvalToken: string | null;
   read: boolean;
   message: string;
   amount: number;

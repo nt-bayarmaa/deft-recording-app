@@ -7,6 +7,7 @@ import { AmountInput } from "@/components/AmountInput";
 import { DatePicker } from "@/components/DatePicker";
 import { BankAccountInput } from "@/components/BankAccountInput";
 import { usePeopleForRepayment, useActiveLoansForPerson, useCreateRepayment, useCreateTransaction } from "@/hooks/useQueries";
+import { createNotification } from "@/data/notifications";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import type { RepaymentType } from "@/types";
@@ -50,6 +51,10 @@ export default function RecordRepayment() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPerson || !selectedLoan || !appUser) return;
+    if (selectedLoan === "__manual__") {
+      toast({ title: "Алдаа", description: "Зээлээ сонгоно уу.", variant: "destructive" });
+      return;
+    }
 
     const personName = personOptions.find((p) => p.id === selectedPerson)?.name ?? "";
 
@@ -65,7 +70,25 @@ export default function RecordRepayment() {
         personName,
       },
       {
-        onSuccess: (repayment) => {
+        onSuccess: async (repayment) => {
+          // Төлбөр төлөх: lender-т notification илгээх (зөвшөөрөх шаардлагатай)
+          if (repaymentType === "pay" && repayment.approvalToken && selectedPerson) {
+            const borrowerName = appUser?.nickname || appUser?.username || appUser?.userCode || "Хэрэглэгч";
+            try {
+              await createNotification({
+                userId: selectedPerson,
+                type: "repayment_recorded",
+                relatedRepaymentId: repayment.id,
+                approvalToken: repayment.approvalToken,
+                message: `${borrowerName} танд төлбөр төлсөн гэж баталгаажуулахыг хүсч байна`,
+                amount: repayment.amount,
+                currency: repayment.currency,
+                personName: borrowerName,
+              });
+            } catch (e) {
+              toast({ title: "Анхааруулга", description: "Мэдэгдэл илгээгдээгүй.", variant: "destructive" });
+            }
+          }
           // Create transaction if bank info provided
           if (showBankInfo && (senderBank !== "other" || senderAccount || recipientBank !== "other" || recipientAccount)) {
             createTransaction.mutate({
@@ -79,6 +102,9 @@ export default function RecordRepayment() {
               recipientAccount: recipientAccount || null,
               memo,
             });
+          }
+          if (repaymentType === "pay") {
+            toast({ title: "Бүртгэгдлээ", description: "Зээл өгсөн хүн зөвшөөрнө хүртэл хүлээнэ үү." });
           }
           navigate("/", { replace: true });
         },

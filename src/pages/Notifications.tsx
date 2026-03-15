@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { useNotifications, useMarkNotificationAsRead } from "@/hooks/useQueries";
 import { formatAmount, formatDate } from "@/data/mock";
@@ -5,11 +6,19 @@ import { cn } from "@/lib/utils";
 import { Bell } from "lucide-react";
 
 export default function Notifications() {
+  const navigate = useNavigate();
   const { data: notifications = [], isLoading, error } = useNotifications();
   const markAsRead = useMarkNotificationAsRead();
 
-  const handleView = (id: string, read: boolean) => {
-    if (!read) markAsRead.mutate(id);
+  const handleView = (notif: (typeof notifications)[0]) => {
+    if (!notif.read) markAsRead.mutate(notif.id);
+    if (notif.approvalToken) {
+      if (notif.relatedRepaymentId) {
+        navigate(`/repayment/approve/${notif.approvalToken}`);
+      } else if (notif.relatedLoanId) {
+        navigate(`/approve/${notif.approvalToken}`);
+      }
+    }
   };
 
   return (
@@ -44,8 +53,8 @@ export default function Notifications() {
             {notifications.map((notif) => (
               <div
                 key={notif.id}
-                className={cn("p-4 bg-card", !notif.read && "bg-muted/50")}
-                onClick={() => handleView(notif.id, notif.read)}
+                className={cn("p-4 bg-card cursor-pointer", !notif.read && "bg-muted/50")}
+                onClick={() => handleView(notif)}
               >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold shrink-0">

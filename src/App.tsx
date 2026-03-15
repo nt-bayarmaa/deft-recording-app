@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 import Scan from "./pages/Scan";
 import ApproveLoan from "./pages/ApproveLoan";
+import ApproveRepayment from "./pages/ApproveRepayment";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
             <Route path="/approve/:id" element={<ProtectedRoute><ApproveLoan /></ProtectedRoute>} />
+            <Route path="/repayment/approve/:id" element={<ProtectedRoute><ApproveRepayment /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
